@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: smart-contract-audit-backend
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false   #TODO set manually in Render dashboard
+    autoDeploy: true

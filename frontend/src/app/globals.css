@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --font-oxanium: 'Oxanium', sans-serif;
+  --font-space-mono: 'Space Mono', monospace;
+  --font-dm-sans: 'DM Sans', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #060a0f;
+  color: #e2e8f0;
+  font-family: var(--font-dm-sans);
+  min-height: 100vh;
+}
+
+/* Subtle dot-grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, #1a2d4520 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Fade top/bottom of grid */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 30%, #060a0f 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #060a0f; }
+::-webkit-scrollbar-thumb { background: #1a2d45; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #38bdf830; }
+
+/* Scanner line animation */
+@keyframes scanLine {
+  0%   { top: -2px; opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  animation: scanLine 2s linear infinite;
+  box-shadow: 0 0 12px #38bdf8;
+}
+
+/* Drop zone active state */
+.drop-active {
+  border-color: #38bdf8 !important;
+  background-color: #38bdf808 !important;
+}
+
+/* Severity badge pulse for CRITICAL */
+@keyframes criticalPulse {
+  0%, 100% { box-shadow: 0 0 0 0 #ef444430; }
+  50% { box-shadow: 0 0 0 6px #ef444400; }
+}
+
+.badge-critical {
+  animation: criticalPulse 2s ease infinite;
+}
+
+/* Accordion smooth open */
+.vuln-body {
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.3s ease;
+}
+
+/* Glowing accent line */
+.glow-line {
+  box-shadow: 0 0 8px #38bdf850;
+}
