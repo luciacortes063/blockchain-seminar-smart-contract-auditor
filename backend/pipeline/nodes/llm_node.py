@@ -15,7 +15,7 @@ INSTRUCTIONS_PATH = (
     Path(__file__).parent.parent.parent
     / "data"
     / "instructions"
-    / "vulnerability_report_llm.txt"
+    / "prompt.txt"
 )
 
 # Best free model on Groq for code analysis.
