@@ -1,15 +1,3 @@
-"""
-pipeline/nodes/llm_node.py
-
-Calls Groq's free API via LangChain to get a structured vulnerability report.
-
-Setup:
-  1. Get a free API key at https://console.groq.com
-  2. Set environment variable: GROQ_API_KEY=gsk_...
-     - Locally: add to .env file
-     - Render: add in dashboard → Environment Variables
-"""
-
 import json
 import logging
 import os
@@ -27,7 +15,7 @@ INSTRUCTIONS_PATH = (
     Path(__file__).parent.parent.parent
     / "data"
     / "instructions"
-    / "prompt.txt"
+    / "vulnerability_report_llm.txt"
 )
 
 # Best free model on Groq for code analysis.
@@ -89,8 +77,15 @@ def run_llm_node(state: AuditState) -> AuditState:
         response = llm.invoke(messages)
         parsed = _extract_json(response.content)
 
-        n = len(parsed.get("llm_analysis", {}).get("vulnerabilities", []))
-        logger.info("  ✓ LLM done — %d vulnerabilities found", n)
+        vulns = parsed.get("llm_analysis", {}).get("vulnerabilities", [])
+        logger.info("  ✓ LLM done — %d vulnerabilities found", len(vulns))
+
+        # ── Full LLM output ────────────────────────────────────────────────
+        logger.info("━" * 50)
+        logger.info("LLM RAW OUTPUT")
+        logger.info("━" * 50)
+        logger.info(json.dumps(parsed, indent=2, ensure_ascii=False))
+        logger.info("━" * 50)
 
         return {**state, "llm_report": parsed}
 

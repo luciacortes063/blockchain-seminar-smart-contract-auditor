@@ -10,6 +10,7 @@ Deduplication strategy:
   - Final list is sorted by severity (CRITICAL → INFO)
 """
 
+import json
 import logging
 from datetime import datetime, timezone
 
@@ -118,5 +119,12 @@ def run_merge_node(state: AuditState) -> AuditState:
             "slither": (state.get("slither_report") or {}).get("raw_output"),
         },
     }
+
+    # ── Final report ───────────────────────────────────────────────────────
+    logger.info("━" * 50)
+    logger.info("FINAL REPORT")
+    logger.info("━" * 50)
+    logger.info(json.dumps(final_report, indent=2, ensure_ascii=False))
+    logger.info("━" * 50)
 
     return {**state, "final_report": final_report, "errors": errors}
