@@ -75,6 +75,50 @@ const SEV: Record<Severity, {
 const CONF_PCT: Record<string, number> = { HIGH: 95, MEDIUM: 70, LOW: 40 }
 const SIDEBAR_INIT = 7
 
+/* ─── Snippet search ────────────────────────────────────────────────────────────
+ *
+ * Problem: the LLM backend often returns line_numbers=[1] as a fallback,
+ * which means the editor can only show line 1 instead of the real location.
+ *
+ * Solution: when we have the full file content, scan each line of the file
+ * for the text from affected_code_snippet to find the *actual* line numbers.
+ * Slither already provides correct numbers, so for those the search will
+ * simply confirm/agree with what's already stored.
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+function findSnippetInFile(fileContent: string, snippet: string): number[] {
+  if (!fileContent || !snippet.trim()) return []
+
+  const fileLines    = fileContent.split('\n')
+  const snippetLines = snippet
+    .trim()
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 2)
+
+  if (snippetLines.length === 0) return []
+
+  // Pick the longest (most distinctive) line from the snippet as the search anchor
+  const anchor = snippetLines.reduce((a, b) => (a.length >= b.length ? a : b))
+  if (anchor.length < 3) return []
+
+  for (let i = 0; i < fileLines.length; i++) {
+    const fileLine = fileLines[i].trim()
+    if (
+      fileLine === anchor ||
+      fileLine.includes(anchor) ||
+      (anchor.includes(fileLine) && fileLine.length > 3)
+    ) {
+      // Found — build line numbers for each snippet line starting here
+      return snippetLines
+        .map((_, j) => i + j + 1)
+        .filter(n => n <= fileLines.length)
+    }
+  }
+
+  return []
+}
+
 /* ─── Root ──────────────────────────────────────────────────────────────────── */
 export default function ReportView({
   report,
@@ -106,7 +150,6 @@ export default function ReportView({
           className="flex items-start justify-between gap-4 px-5 py-4 rounded-2xl"
           style={{ background: '#0D1526' }}
         >
-          {/* Left */}
           <div>
             <h1
               className="font-display font-bold text-3xl tracking-tight mb-3"
@@ -130,7 +173,6 @@ export default function ReportView({
             </div>
           </div>
 
-          {/* Right: Analysis Engine */}
           <div
             className="flex-shrink-0 rounded-xl border px-4 py-3 min-w-[178px]"
             style={{ borderColor: '#1C2D45', background: '#080E1C' }}
@@ -193,7 +235,6 @@ export default function ReportView({
                     outlineOffset: -1,
                   }}
                 >
-                  {/* Severity left bar */}
                   <div
                     className="absolute left-0 top-0 bottom-0 w-0.5"
                     style={{ background: s.color }}
@@ -279,7 +320,6 @@ function VulnDetail({
   const s       = SEV[vuln.severity] ?? SEV.INFO
   const confPct = CONF_PCT[vuln.confidence] ?? 70
 
-  /* Show code block when we have a snippet OR when we have fileContent + line numbers */
   const hasCode = !!(
     vuln.affected_code_snippet?.trim() ||
     (fileContent && (vuln.line_numbers?.length ?? 0) > 0)
@@ -288,7 +328,7 @@ function VulnDetail({
   return (
     <div className="p-5 space-y-5">
 
-      {/* ── Severity pill + title + description ── */}
+      {/* Severity pill + title + description */}
       <div>
         <span
           className="inline-flex items-center text-xs font-mono font-bold px-3 py-1 rounded-md mb-3"
@@ -307,11 +347,10 @@ function VulnDetail({
         )}
       </div>
 
-      {/* ── IMPACT ── */}
+      {/* IMPACT */}
       {vuln.exploitation_scenario && (
         <div>
-          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2"
-             style={{ color: '#F97316' }}>
+          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2" style={{ color: '#F97316' }}>
             Impact
           </p>
           <div
@@ -324,11 +363,10 @@ function VulnDetail({
         </div>
       )}
 
-      {/* ── LOCATION (code editor) ── */}
+      {/* LOCATION */}
       {hasCode && (
         <div>
-          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2"
-             style={{ color: '#2DD4BF' }}>
+          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2" style={{ color: '#2DD4BF' }}>
             Location
           </p>
           <CodeBlock
@@ -339,11 +377,10 @@ function VulnDetail({
         </div>
       )}
 
-      {/* ── RECOMMENDATION ── */}
+      {/* RECOMMENDATION */}
       {vuln.recommendation && (
         <div>
-          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2"
-             style={{ color: '#4ADE80' }}>
+          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2" style={{ color: '#4ADE80' }}>
             Recommendation
           </p>
           <div
@@ -356,10 +393,9 @@ function VulnDetail({
         </div>
       )}
 
-      {/* ── Bottom metadata row ── */}
+      {/* Bottom row: Confidence · Detected By · Category */}
       <div className="grid grid-cols-3 gap-3 pt-1">
 
-        {/* Confidence */}
         <div
           className="rounded-xl p-4 flex flex-col items-center gap-2"
           style={{ background: '#080E1C', border: '1px solid #1C2D45' }}
@@ -371,7 +407,6 @@ function VulnDetail({
           </p>
         </div>
 
-        {/* Detected By — 3 options matching Figma */}
         <div
           className="rounded-xl p-4 flex flex-col gap-2"
           style={{ background: '#080E1C', border: '1px solid #1C2D45' }}
@@ -380,21 +415,18 @@ function VulnDetail({
             Detected By
           </p>
           <div className="flex flex-col gap-1.5 mt-0.5">
-            {/* AI GenAI */}
             <DetectedBadge
               icons={<AiSmallIcon />}
               label="AI GenAI"
               active={vuln.source === 'LLM' || vuln.source === 'BOTH'}
               color="#9B4DFF"
             />
-            {/* Slither */}
             <DetectedBadge
               icons={<SlitherSmallIcon color="#00D4FF" />}
               label="Slither"
               active={vuln.source === 'SLITHER' || vuln.source === 'BOTH'}
               color="#00D4FF"
             />
-            {/* GenAI + Slither */}
             <DetectedBadge
               icons={<><AiSmallIcon /><SlitherSmallIcon color="#FF2D7C" /></>}
               label="GenAI + Slither"
@@ -404,7 +436,6 @@ function VulnDetail({
           </div>
         </div>
 
-        {/* Category */}
         <div
           className="rounded-xl p-4 flex flex-col items-center justify-center gap-1"
           style={{ background: '#080E1C', border: '1px solid #1C2D45' }}
@@ -427,7 +458,20 @@ function VulnDetail({
   )
 }
 
-/* ─── Code block ────────────────────────────────────────────────────────────── */
+/* ─── Code block ────────────────────────────────────────────────────────────────
+ *
+ * Priority for determining which lines to show / highlight:
+ *
+ * 1. If fileContent exists + snippet is non-empty:
+ *      → search for the snippet text in the file (fixes LLM's wrong line_numbers)
+ *      → if found, use those line numbers for highlighting AND context window
+ *      → if NOT found, fall back to the backend-provided line_numbers
+ * 2. If fileContent exists + no snippet (or search returned nothing):
+ *      → use backend line_numbers to build the context window
+ * 3. If no fileContent:
+ *      → render the snippet as-is with backend line_numbers for the gutter
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
 function CodeBlock({
   snippet,
   lineNumbers,
@@ -439,31 +483,43 @@ function CodeBlock({
 }) {
   let lines: string[]
   let firstDisplayLine: number
+  let hlSet: Set<number>
 
-  if (fileContent && lineNumbers.length > 0) {
-    /*
-     * Use the uploaded file — show CONTEXT lines before and after
-     * the affected range so the editor looks like the Figma.
-     */
-    const allLines   = fileContent.split('\n')
-    const CONTEXT    = 3
-    const minLine    = Math.min(...lineNumbers)
-    const maxLine    = Math.max(...lineNumbers)
-    const startIdx   = Math.max(0, minLine - 1 - CONTEXT)
-    const endIdx     = Math.min(allLines.length - 1, maxLine - 1 + CONTEXT)
-    lines            = allLines.slice(startIdx, endIdx + 1)
-    firstDisplayLine = startIdx + 1
+  if (fileContent) {
+    // Step 1 — try to find the snippet in the actual file
+    const searched: number[] = snippet.trim()
+      ? findSnippetInFile(fileContent, snippet)
+      : []
+
+    // Step 2 — decide which set of line numbers to use for highlighting
+    const effectiveLines: number[] = searched.length > 0 ? searched : lineNumbers
+
+    if (effectiveLines.length > 0) {
+      const allLines   = fileContent.split('\n')
+      const CONTEXT    = 3
+      const minLine    = Math.min(...effectiveLines)
+      const maxLine    = Math.max(...effectiveLines)
+      const startIdx   = Math.max(0, minLine - 1 - CONTEXT)
+      const endIdx     = Math.min(allLines.length - 1, maxLine - 1 + CONTEXT)
+      lines            = allLines.slice(startIdx, endIdx + 1)
+      firstDisplayLine = startIdx + 1
+      hlSet            = new Set(effectiveLines)
+    } else {
+      // No usable line info — show the whole file (last-resort fallback)
+      lines            = fileContent.split('\n')
+      firstDisplayLine = 1
+      hlSet            = new Set<number>()
+    }
   } else {
-    /* Fallback: use the snippet from the API */
+    // No file — render snippet with backend line numbers in the gutter
     const rawLines = snippet.split('\n')
     let start = 0, end = rawLines.length - 1
     while (start <= end && rawLines[start].trim() === '') start++
     while (end >= start && rawLines[end].trim() === '')   end--
     lines            = rawLines.slice(start, end + 1)
     firstDisplayLine = lineNumbers.length > 0 ? lineNumbers[0] : 1
+    hlSet            = new Set(lineNumbers)
   }
-
-  const hlSet = new Set(lineNumbers)
 
   return (
     <div
@@ -482,7 +538,7 @@ function CodeBlock({
               return (
                 <tr key={i} style={hl ? { background: 'rgba(239,68,68,0.14)' } : {}}>
 
-                  {/* Line number — sticky so it stays when scrolling horizontally */}
+                  {/* Line number — sticky during horizontal scroll */}
                   <td
                     className="select-none text-right sticky left-0"
                     style={{
@@ -505,14 +561,14 @@ function CodeBlock({
                       color:         '#EF4444',
                       paddingTop:    5,
                       verticalAlign: 'top',
-                      minWidth:      22, width: 22,
-                      fontWeight:    'bold',
+                      minWidth: 22, width: 22,
+                      fontWeight: 'bold',
                     }}
                   >
                     {hl ? '→' : '\u00a0'}
                   </td>
 
-                  {/* Code with syntax highlighting */}
+                  {/* Syntax-highlighted code */}
                   <td
                     className="whitespace-pre"
                     style={{
@@ -536,10 +592,10 @@ function CodeBlock({
 /* ─── Solidity syntax highlighter ───────────────────────────────────────────── */
 function SolidityLine({ code, highlighted }: { code: string; highlighted: boolean }) {
   const baseColor = highlighted ? '#FCA5A5' : '#94A3B8'
-  const kwColor   = '#60A5FA'   // keywords  — blue
-  const strColor  = '#86EFAC'   // strings   — green
-  const numColor  = '#FCD34D'   // numbers   — amber
-  const cmtColor  = '#4B5563'   // comments  — gray
+  const kwColor   = '#60A5FA'
+  const strColor  = '#86EFAC'
+  const numColor  = '#FCD34D'
+  const cmtColor  = '#4B5563'
 
   const tokenRe =
     /(\/\/[^\n]*|"[^"]*"|'[^']*'|\b0x[0-9a-fA-F]+\b|\b\d+\b|\b(?:function|require|emit|mapping|address|uint256|uint|bool|string|bytes|public|private|external|internal|view|pure|payable|returns|memory|storage|calldata|if|else|for|while|return|event|modifier|contract|interface|library|constructor|struct|enum|import|pragma|solidity|msg|block|tx|true|false)\b)/g
@@ -548,9 +604,8 @@ function SolidityLine({ code, highlighted }: { code: string; highlighted: boolea
   let last = 0, m: RegExpExecArray | null
 
   while ((m = tokenRe.exec(code)) !== null) {
-    if (m.index > last) {
+    if (m.index > last)
       parts.push(<span key={last} style={{ color: baseColor }}>{code.slice(last, m.index)}</span>)
-    }
     const tok = m[0]
     let c = baseColor
     if (tok.startsWith('//'))                            c = cmtColor
@@ -560,48 +615,30 @@ function SolidityLine({ code, highlighted }: { code: string; highlighted: boolea
     parts.push(<span key={m.index} style={{ color: c }}>{tok}</span>)
     last = m.index + tok.length
   }
-  if (last < code.length) {
+  if (last < code.length)
     parts.push(<span key={last} style={{ color: baseColor }}>{code.slice(last)}</span>)
-  }
   return <>{parts}</>
 }
 
 /* ─── Stat card ──────────────────────────────────────────────────────────────── */
-function StatCard({
-  sev,
-  count,
-  icon,
-}: {
-  sev: Severity
-  count: number
-  icon: React.ReactNode
-}) {
+function StatCard({ sev, count, icon }: { sev: Severity; count: number; icon: React.ReactNode }) {
   const s = SEV[sev]
   return (
-    /*
-     * Always show the severity-colored gradient and border — regardless of count.
-     * Previously guarded by `count > 0` which caused CRITICAL/HIGH to appear
-     * unstyled when they had zero findings.
-     */
     <div
       className="rounded-xl px-4 py-3 flex items-center justify-between"
       style={{
-        background: s.cardGrad,
+        background: s.cardGrad,          // always show severity gradient
         border:     `1px solid ${s.cardBorder}`,
         boxShadow:  s.cardShadow,
       }}
     >
       <div>
-        <p
-          className="font-display text-3xl font-bold leading-none"
-          style={{ fontFamily: 'var(--font-oxanium)', color: s.color }}
-        >
+        <p className="font-display text-3xl font-bold leading-none"
+           style={{ fontFamily: 'var(--font-oxanium)', color: s.color }}>
           {count}
         </p>
-        <p
-          className="text-xs font-mono uppercase tracking-wider mt-1"
-          style={{ color: s.color, opacity: 0.82 }}
-        >
+        <p className="text-xs font-mono uppercase tracking-wider mt-1"
+           style={{ color: s.color, opacity: 0.82 }}>
           {s.label}
         </p>
       </div>
@@ -617,15 +654,9 @@ function TotalCard({ count }: { count: number }) {
       style={{ background: '#0D1526', border: '1px solid #1C2D45' }}
     >
       <div>
-        <p
-          className="font-display text-3xl font-bold leading-none text-slate-300"
-          style={{ fontFamily: 'var(--font-oxanium)' }}
-        >
-          {count}
-        </p>
-        <p className="text-xs font-mono uppercase tracking-wider mt-1 text-slate-500">
-          Total
-        </p>
+        <p className="font-display text-3xl font-bold leading-none text-slate-300"
+           style={{ fontFamily: 'var(--font-oxanium)' }}>{count}</p>
+        <p className="text-xs font-mono uppercase tracking-wider mt-1 text-slate-500">Total</p>
       </div>
       <span className="text-slate-500 text-2xl font-light leading-none">+</span>
     </div>
@@ -634,9 +665,7 @@ function TotalCard({ count }: { count: number }) {
 
 /* ─── Confidence circle ─────────────────────────────────────────────────────── */
 function ConfCircle({ pct, color }: { pct: number; color: string }) {
-  const r    = 20
-  const circ = 2 * Math.PI * r
-  const dash = (pct / 100) * circ
+  const r = 20, circ = 2 * Math.PI * r, dash = (pct / 100) * circ
   return (
     <div className="relative flex items-center justify-center" style={{ width: 56, height: 56 }}>
       <svg className="absolute inset-0 -rotate-90" width="56" height="56" viewBox="0 0 56 56">
@@ -651,15 +680,9 @@ function ConfCircle({ pct, color }: { pct: number; color: string }) {
 
 /* ─── Detected By badge ──────────────────────────────────────────────────────── */
 function DetectedBadge({
-  icons,
-  label,
-  active,
-  color,
+  icons, label, active, color,
 }: {
-  icons: React.ReactNode
-  label: string
-  active: boolean
-  color: string
+  icons: React.ReactNode; label: string; active: boolean; color: string
 }) {
   return (
     <div
@@ -678,15 +701,7 @@ function DetectedBadge({
 }
 
 /* ─── Engine row ─────────────────────────────────────────────────────────────── */
-function EngineRow({
-  icon,
-  label,
-  active,
-}: {
-  icon: React.ReactNode
-  label: string
-  active: boolean
-}) {
+function EngineRow({ icon, label, active }: { icon: React.ReactNode; label: string; active: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
       <div
@@ -697,10 +712,7 @@ function EngineRow({
       </div>
       <div>
         <p className="text-slate-300 text-xs leading-none">{label}</p>
-        <p
-          className="text-xs font-mono font-bold mt-0.5"
-          style={{ color: active ? '#4ADE80' : '#374151' }}
-        >
+        <p className="text-xs font-mono font-bold mt-0.5" style={{ color: active ? '#4ADE80' : '#374151' }}>
           {active ? 'Active' : 'Inactive'}
         </p>
       </div>
@@ -708,9 +720,7 @@ function EngineRow({
   )
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   ICONS
-════════════════════════════════════════════════════════════════════════════ */
+/* ════════════ ICONS ════════════════════════════════════════════════════════ */
 
 function FileDocIcon() {
   return (
@@ -724,7 +734,6 @@ function FileDocIcon() {
   )
 }
 
-/** Analysis Engine header — AI gradient pill */
 function AiBadgeIcon() {
   return (
     <div style={{
@@ -733,29 +742,21 @@ function AiBadgeIcon() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 8, fontWeight: 800, color: '#fff',
       fontFamily: 'monospace', letterSpacing: -0.5,
-    }}>
-      AI
-    </div>
+    }}>AI</div>
   )
 }
 
-/** Analysis Engine header — Slither hexagon */
 function SlitherBadgeIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <polygon
-        points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5"
-        stroke="#00D4FF" strokeWidth="1.2" fill="rgba(0,212,255,0.10)"
-      />
-      <polygon
-        points="10,5 14,7.3 14,12.7 10,15 6,12.7 6,7.3"
-        stroke="#00D4FF" strokeWidth="0.8" fill="none" opacity="0.45"
-      />
+      <polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5"
+               stroke="#00D4FF" strokeWidth="1.2" fill="rgba(0,212,255,0.10)" />
+      <polygon points="10,5 14,7.3 14,12.7 10,15 6,12.7 6,7.3"
+               stroke="#00D4FF" strokeWidth="0.8" fill="none" opacity="0.45" />
     </svg>
   )
 }
 
-/** Detected By — small AI pill */
 function AiSmallIcon() {
   return (
     <div style={{
@@ -764,24 +765,17 @@ function AiSmallIcon() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 6, fontWeight: 800, color: '#fff',
       fontFamily: 'monospace', letterSpacing: -0.5,
-    }}>
-      AI
-    </div>
+    }}>AI</div>
   )
 }
 
-/** Detected By — small Slither hexagon */
 function SlitherSmallIcon({ color = '#00D4FF' }: { color?: string }) {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-      <polygon
-        points="7,0.8 12.5,3.9 12.5,10.1 7,13.2 1.5,10.1 1.5,3.9"
-        stroke={color} strokeWidth="1.1" fill={`${color}18`}
-      />
-      <polygon
-        points="7,3.5 10,5.2 10,8.8 7,10.5 4,8.8 4,5.2"
-        stroke={color} strokeWidth="0.7" fill="none" opacity="0.5"
-      />
+      <polygon points="7,0.8 12.5,3.9 12.5,10.1 7,13.2 1.5,10.1 1.5,3.9"
+               stroke={color} strokeWidth="1.1" fill={`${color}18`} />
+      <polygon points="7,3.5 10,5.2 10,8.8 7,10.5 4,8.8 4,5.2"
+               stroke={color} strokeWidth="0.7" fill="none" opacity="0.5" />
     </svg>
   )
 }
@@ -807,19 +801,15 @@ function ShieldCheckIcon() {
   )
 }
 
-/* ── CRITICAL — EKG / heartbeat ── */
 function EkgIcon({ color }: { color: string }) {
   return (
     <svg width="44" height="24" viewBox="0 0 44 24" fill="none">
-      <polyline
-        points="0,12 6,12 9,3 13,21 17,7 21,17 25,12 44,12"
-        stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-      />
+      <polyline points="0,12 6,12 9,3 13,21 17,7 21,17 25,12 44,12"
+                stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-/* ── HIGH bars — ascending left to right ── */
 function HighBarIcon({ color }: { color: string }) {
   const heights = [4, 6, 8, 10, 13, 16, 18]
   const maxH    = 18
@@ -833,7 +823,6 @@ function HighBarIcon({ color }: { color: string }) {
   )
 }
 
-/* ── MEDIUM bars — balanced / symmetric ── */
 function MediumBarIcon({ color }: { color: string }) {
   const heights = [9, 11, 13, 13, 13, 11, 9]
   const maxH    = 13
@@ -847,7 +836,6 @@ function MediumBarIcon({ color }: { color: string }) {
   )
 }
 
-/* ── LOW bars — descending left to right ── */
 function LowBarIcon({ color }: { color: string }) {
   const heights = [18, 16, 13, 10, 8, 6, 4]
   const maxH    = 18
