@@ -5,203 +5,199 @@ import type { AuditReport } from '@/types/report'
 import FileUpload from './components/FileUpload'
 import ReportView from './components/ReportView'
 
-type State = 'idle' | 'scanning' | 'done' | 'error'
+type AppState = 'idle' | 'scanning' | 'done' | 'error'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
 const SCAN_MESSAGES = [
-  'Parsing contract bytecode…',
-  'Running LLM semantic analysis…',
-  'Executing Slither static analyzer…',
+  'Running GenAI and Slither analysis…',
+  'Parsing Solidity bytecode…',
   'Detecting reentrancy patterns…',
-  'Checking access control…',
+  'Checking access control vulnerabilities…',
+  'Running integer overflow analysis…',
   'Merging and deduplicating findings…',
   'Building vulnerability report…',
 ]
 
+/* ── Main page ──────────────────────────────────────────────────────────── */
+
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null)
-  const [state, setState] = useState<State>('idle')
-  const [report, setReport] = useState<AuditReport | null>(null)
-  const [error, setError] = useState<string>('')
-  const [scanMsgIdx, setScanMsgIdx] = useState(0)
+  const [file, setFile]       = useState<File | null>(null)
+  const [appState, setAppState] = useState<AppState>('idle')
+  const [report, setReport]   = useState<AuditReport | null>(null)
+  const [error, setError]     = useState('')
+  const [msgIdx, setMsgIdx]   = useState(0)
 
   const handleSubmit = async () => {
     if (!file) return
-
-    setState('scanning')
+    setAppState('scanning')
     setError('')
     setReport(null)
 
-    // Cycle through scan messages while waiting
     let idx = 0
-    const interval = setInterval(() => {
+    const ticker = setInterval(() => {
       idx = (idx + 1) % SCAN_MESSAGES.length
-      setScanMsgIdx(idx)
-    }, 1800)
+      setMsgIdx(idx)
+    }, 1900)
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      const fd = new FormData()
+      fd.append('file', file)
 
-      const res = await fetch(`${API_URL}/api/v1/audit`, {
-        method: 'POST',
-        body: formData,
-      })
-
+      const res = await fetch(`${API_URL}/api/v1/audit`, { method: 'POST', body: fd })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ detail: res.statusText }))
-        throw new Error(body.detail ?? `Server error: ${res.status}`)
+        throw new Error(body.detail ?? `Error ${res.status}`)
       }
-
       const data: AuditReport = await res.json()
       setReport(data)
-      setState('done')
+      setAppState('done')
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setError(msg)
-      setState('error')
+      setError(err instanceof Error ? err.message : 'Unknown error')
+      setAppState('error')
     } finally {
-      clearInterval(interval)
+      clearInterval(ticker)
     }
   }
 
   const handleReset = () => {
-    setFile(null)
-    setReport(null)
-    setError('')
-    setState('idle')
+    setFile(null); setReport(null); setError(''); setAppState('idle')
+  }
+
+  /* Report view gets full-screen layout */
+  if (appState === 'done' && report) {
+    return <ReportView report={report} onReset={handleReset} />
   }
 
   return (
-    <main className="relative z-10 min-h-screen">
-      <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
+    <main className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-16">
+      <div className="w-full max-w-2xl">
 
         {/* ── Header ── */}
-        <header className="mb-12 text-center">
-          <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full border border-bg-border bg-bg-surface">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
-            <span className="font-mono text-xs text-slate-500">LLM + Slither · Powered by Groq</span>
-          </div>
-          <h1
-            className="text-4xl sm:text-5xl font-display font-bold tracking-tight text-slate-100 mb-3"
-            style={{ fontFamily: 'var(--font-oxanium)' }}
-          >
-            Smart Contract<br />
-            <span className="text-accent">Auditor</span>
+        <header className="text-center mb-10">
+          <h1 className="font-display text-5xl sm:text-6xl font-bold tracking-tight mb-4"
+              style={{ fontFamily: 'var(--font-oxanium)' }}>
+            <span className="grad-text">Smart Contract</span>{' '}
+            <span className="text-slate-100">Auditor</span>
           </h1>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed">
-            Upload a Solidity file. Get a structured vulnerability report combining
-            LLM semantic analysis and Slither static analysis.
+          <p className="text-slate-400 text-sm mb-1">
+            Upload your Solidity Smart Contract. Get a detailed security report.
+          </p>
+          <p className="grad-text text-sm font-medium" style={{ fontFamily: 'var(--font-oxanium)' }}>
+            GenAI + Slither-powered analysis
           </p>
         </header>
 
-        {/* ── Content ── */}
-        {state === 'idle' && (
-          <div className="space-y-5 animate-slide-up">
+        {/* ── Upload / Scanning / Error ── */}
+        {appState === 'idle' && (
+          <div className="space-y-4 animate-slide-up">
             <FileUpload file={file} onChange={setFile} />
             <button
               onClick={handleSubmit}
               disabled={!file}
-              className={`w-full py-4 rounded-xl font-display font-semibold text-sm uppercase tracking-widest transition-all duration-300
+              className={`w-full py-4 rounded-2xl font-display font-bold text-sm uppercase tracking-widest transition-all duration-300
                 ${file
-                  ? 'bg-accent text-bg-base hover:bg-accent/90 shadow-lg shadow-accent/20 hover:shadow-accent/30 cursor-pointer'
-                  : 'bg-bg-surface text-slate-600 border border-bg-border cursor-not-allowed'
-                }
-              `}
+                  ? 'grad-btn text-white cursor-pointer shadow-lg shadow-purple-900/30'
+                  : 'bg-bg-card text-slate-600 border border-bg-border cursor-not-allowed'
+                }`}
+              style={{ fontFamily: 'var(--font-oxanium)' }}
             >
               Detect Vulnerabilities
             </button>
           </div>
         )}
 
-        {state === 'scanning' && (
-          <ScanningView message={SCAN_MESSAGES[scanMsgIdx]} />
-        )}
+        {appState === 'scanning' && <ScanningView message={SCAN_MESSAGES[msgIdx]} />}
 
-        {state === 'error' && (
+        {appState === 'error' && (
           <div className="animate-slide-up space-y-4">
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6">
-              <p className="font-mono text-xs text-red-400 mb-2 uppercase tracking-wider">Error</p>
+            <div className="rounded-2xl border border-red-500/25 bg-red-500/8 p-6">
+              <p className="font-mono text-xs text-red-400 mb-2 uppercase tracking-widest">Error</p>
               <p className="text-slate-300 text-sm">{error}</p>
             </div>
             <button
               onClick={handleReset}
-              className="w-full py-3 rounded-xl border border-bg-border text-slate-400 hover:text-accent hover:border-accent/30 transition-all font-mono text-sm"
+              className="w-full py-3 rounded-2xl border border-bg-border text-slate-400 hover:text-brand-cyan hover:border-brand-cyan/30 transition-all text-sm font-mono"
             >
-              Try again
+              ← Try again
             </button>
           </div>
         )}
-
-        {state === 'done' && report && (
-          <ReportView report={report} onReset={handleReset} />
-        )}
-
       </div>
     </main>
   )
 }
 
-/* ── Scanning animation ─────────────────────────────────────────────────── */
+/* ── Scanning view ──────────────────────────────────────────────────────── */
 
 function ScanningView({ message }: { message: string }) {
   return (
     <div className="animate-fade-in">
-      {/* Scanning card */}
-      <div className="relative rounded-xl border border-accent/20 bg-bg-surface overflow-hidden" style={{ height: 260 }}>
-        {/* Scan line */}
-        <div className="scan-line" />
+      <div className="grad-border overflow-hidden" style={{ height: 280 }}>
+        <div className="relative w-full h-full bg-bg-surface rounded-2xl overflow-hidden scan-grid">
+          {/* Animated scan line */}
+          <div className="scan-line" />
 
-        {/* Grid overlay */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: 'linear-gradient(#38bdf820 1px, transparent 1px), linear-gradient(90deg, #38bdf820 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }}
-        />
+          {/* Corner brackets */}
+          <span className="absolute top-4 left-4 w-5 h-5 border-l-2 border-t-2 border-brand-cyan/60 rounded-tl" />
+          <span className="absolute top-4 right-4 w-5 h-5 border-r-2 border-t-2 border-brand-pink/60 rounded-tr" />
+          <span className="absolute bottom-4 left-4 w-5 h-5 border-l-2 border-b-2 border-brand-cyan/60 rounded-bl" />
+          <span className="absolute bottom-4 right-4 w-5 h-5 border-r-2 border-b-2 border-brand-pink/60 rounded-br" />
 
-        {/* Center content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <ScannerIcon />
-          <div className="text-center">
-            <p className="font-display text-accent font-semibold tracking-wide mb-1">
-              Analyzing contract
-            </p>
-            <p className="font-mono text-xs text-slate-500 transition-all duration-500">
-              {message}
-            </p>
+          {/* Center: radar + text */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+            <RadarIcon />
+            <div className="text-center">
+              <p className="font-display font-semibold text-slate-100 text-base mb-1"
+                 style={{ fontFamily: 'var(--font-oxanium)' }}>
+                Analyzing Smart Contract
+              </p>
+              <p className="text-slate-500 text-xs transition-all duration-500">{message}</p>
+            </div>
           </div>
         </div>
-
-        {/* Corner decorations */}
-        <span className="absolute top-3 left-3 w-4 h-4 border-l border-t border-accent/40" />
-        <span className="absolute top-3 right-3 w-4 h-4 border-r border-t border-accent/40" />
-        <span className="absolute bottom-3 left-3 w-4 h-4 border-l border-b border-accent/40" />
-        <span className="absolute bottom-3 right-3 w-4 h-4 border-r border-b border-accent/40" />
       </div>
-
-      <p className="text-center text-xs font-mono text-slate-600 mt-4">
+      <p className="text-center text-xs text-slate-600 font-sans mt-4">
         This may take 30–60 seconds depending on contract size
       </p>
     </div>
   )
 }
 
-function ScannerIcon() {
+function RadarIcon() {
   return (
-    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-      <circle cx="20" cy="20" r="18" stroke="#38bdf820" strokeWidth="1" />
-      <circle cx="20" cy="20" r="12" stroke="#38bdf830" strokeWidth="1" />
-      <circle cx="20" cy="20" r="6" stroke="#38bdf840" strokeWidth="1" />
-      <circle cx="20" cy="20" r="2" fill="#38bdf8" />
-      <line x1="20" y1="2" x2="20" y2="8" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round">
-        <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="3s" repeatCount="indefinite" />
-      </line>
-      <line x1="20" y1="32" x2="20" y2="38" stroke="#38bdf840" strokeWidth="1" strokeLinecap="round" />
-      <line x1="2" y1="20" x2="8" y2="20" stroke="#38bdf840" strokeWidth="1" strokeLinecap="round" />
-      <line x1="32" y1="20" x2="38" y2="20" stroke="#38bdf840" strokeWidth="1" strokeLinecap="round" />
-    </svg>
+    <div className="relative w-16 h-16">
+      {/* Static rings */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="30" stroke="rgba(0,212,255,0.12)" strokeWidth="1" />
+        <circle cx="32" cy="32" r="20" stroke="rgba(155,77,255,0.15)" strokeWidth="1" />
+        <circle cx="32" cy="32" r="10" stroke="rgba(255,45,124,0.18)" strokeWidth="1" />
+        {/* Crosshairs */}
+        <line x1="32" y1="2" x2="32" y2="62" stroke="rgba(0,212,255,0.08)" strokeWidth="0.5" />
+        <line x1="2" y1="32" x2="62" y2="32" stroke="rgba(0,212,255,0.08)" strokeWidth="0.5" />
+        {/* Center dot */}
+        <circle cx="32" cy="32" r="2" fill="#9B4DFF" />
+      </svg>
+      {/* Rotating sweep */}
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox="0 0 64 64"
+        fill="none"
+        style={{ animation: 'radarSweep 2.5s linear infinite', transformOrigin: '32px 32px' }}
+      >
+        <path
+          d="M32 32 L32 2 A30 30 0 0 1 57 47 Z"
+          fill="url(#radarGrad)"
+          opacity="0.35"
+        />
+        <line x1="32" y1="32" x2="32" y2="2" stroke="#00D4FF" strokeWidth="1.5" strokeLinecap="round" />
+        <defs>
+          <radialGradient id="radarGrad" cx="32" cy="32" r="30" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#9B4DFF" />
+            <stop offset="100%" stopColor="#00D4FF" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
   )
 }

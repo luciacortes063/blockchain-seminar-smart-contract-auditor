@@ -2,92 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
 
 :root {
   --font-oxanium: 'Oxanium', sans-serif;
   --font-space-mono: 'Space Mono', monospace;
   --font-dm-sans: 'DM Sans', sans-serif;
+  --grad: linear-gradient(90deg, #00D4FF 0%, #9B4DFF 50%, #FF2D7C 100%);
+  --grad-135: linear-gradient(135deg, #00D4FF 0%, #9B4DFF 50%, #FF2D7C 100%);
+  --bg-base: #080C14;
+  --bg-surface: #0D1526;
+  --bg-card: #111D30;
+  --bg-border: #1C2D45;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 
 body {
-  background-color: #060a0f;
-  color: #e2e8f0;
+  background-color: var(--bg-base);
+  color: #E2E8F0;
   font-family: var(--font-dm-sans);
   min-height: 100vh;
 }
 
-/* Subtle dot-grid background */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(circle, #1a2d4520 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(0,212,255,0.05) 1px, transparent 1px);
   background-size: 28px 28px;
   pointer-events: none;
   z-index: 0;
 }
 
-/* Fade top/bottom of grid */
-body::after {
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: #1C2D45; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.25); }
+
+.grad-border {
+  position: relative;
+  background: var(--bg-surface);
+  border-radius: 16px;
+  isolation: isolate;
+}
+.grad-border::before {
   content: '';
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 30%, #060a0f 100%);
-  pointer-events: none;
-  z-index: 0;
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  background: var(--grad-135);
+  z-index: -1;
+  opacity: 0.65;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #060a0f; }
-::-webkit-scrollbar-thumb { background: #1a2d45; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #38bdf830; }
+.grad-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
-/* Scanner line animation */
+.grad-btn {
+  background: var(--grad);
+  transition: opacity 0.2s, transform 0.15s;
+}
+.grad-btn:hover { opacity: 0.88; }
+
 @keyframes scanLine {
   0%   { top: -2px; opacity: 1; }
   90%  { opacity: 1; }
   100% { top: 100%; opacity: 0; }
 }
-
 .scan-line {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
-  animation: scanLine 2s linear infinite;
-  box-shadow: 0 0 12px #38bdf8;
+  background: var(--grad);
+  animation: scanLine 2.4s linear infinite;
+  box-shadow: 0 0 16px rgba(155,77,255,0.7);
 }
 
-/* Drop zone active state */
-.drop-active {
-  border-color: #38bdf8 !important;
-  background-color: #38bdf808 !important;
+.scan-grid {
+  background-image:
+    linear-gradient(rgba(0,212,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,45,124,0.05) 1px, transparent 1px);
+  background-size: 36px 36px;
 }
 
-/* Severity badge pulse for CRITICAL */
-@keyframes criticalPulse {
-  0%, 100% { box-shadow: 0 0 0 0 #ef444430; }
-  50% { box-shadow: 0 0 0 6px #ef444400; }
+@keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes critPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+@keyframes radarSweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-.badge-critical {
-  animation: criticalPulse 2s ease infinite;
-}
-
-/* Accordion smooth open */
-.vuln-body {
-  overflow: hidden;
-  transition: max-height 0.35s ease, opacity 0.3s ease;
-}
-
-/* Glowing accent line */
-.glow-line {
-  box-shadow: 0 0 8px #38bdf850;
-}
+.animate-fade-in  { animation: fadeIn  0.35s ease-out; }
+.animate-slide-up { animation: slideUp 0.4s ease-out; }
+.animate-crit     { animation: critPulse 2s ease infinite; }
