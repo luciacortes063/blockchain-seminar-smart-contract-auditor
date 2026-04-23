@@ -159,7 +159,7 @@ export default function ReportView({ report, onReset }: Props) {
         {/* ── RIGHT DETAIL PANEL ───────────────────────────────────────── */}
         <div className="flex-1 bg-bg-surface border border-l-0 border-bg-border rounded-r-2xl overflow-y-auto">
           {selected
-            ? <VulnDetail vuln={selected} contractCode={report.raw?.llm ? undefined : undefined} />
+            ? <VulnDetail vuln={selected}  />
             : (
               <div className="flex items-center justify-center h-full text-slate-600 font-mono text-sm">
                 Select a vulnerability
@@ -356,21 +356,15 @@ function SyntaxLine({ line, highlighted }: { line: string; highlighted: boolean 
   const color = highlighted ? '#FCA5A5' : '#CBD5E1'
 
   // Keywords
-  const keywords = /\b(function|require|emit|mapping|address|uint256|uint|bool|string|bytes|public|private|external|internal|view|pure|payable|returns|memory|storage|calldata|if|else|for|while|return|event|modifier|contract|interface|library|constructor|struct|enum|import|pragma|solidity|msg|block|tx)\b/g
   // Strings
-  const strings = /"[^"]*"|'[^']*'/g
   // Comments
-  const comments = /\/\/.*/g
 
   // Simple approach: return colored spans
-  const parts: { text: string; type: 'keyword' | 'string' | 'comment' | 'normal' }[] = []
-  let remaining = line
-  let lastIdx = 0
 
   // We'll just do a simple token split
   const tokenRe = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\/\/.*|\b(?:function|require|emit|mapping|address|uint256|uint|bool|string|bytes|public|private|external|internal|view|pure|payable|returns|memory|storage|calldata|if|else|for|while|return|event|modifier|contract|interface|library|constructor|struct|enum|import|pragma|solidity|msg|block|tx)\b)/g
 
-  const segments: JSX.Element[] = []
+  const segments: React.ReactElement[] = []
   let last = 0
   let m: RegExpExecArray | null
 

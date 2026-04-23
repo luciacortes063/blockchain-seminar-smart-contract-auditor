@@ -1,5 +1,5 @@
-export type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO'
-export type Source = 'LLM' | 'SLITHER' | 'BOTH'
+export type Severity   = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO'
+export type Source     = 'LLM' | 'SLITHER' | 'BOTH'
 export type Confidence = 'HIGH' | 'MEDIUM' | 'LOW'
 
 export interface Vulnerability {
@@ -61,4 +61,8 @@ export interface AuditReport {
   vulnerabilities: Vulnerability[]
   positive_findings: string[]
   gas_optimizations: GasOptimization[]
+  raw?: {
+    llm?: Record<string, unknown> | null
+    slither?: Record<string, unknown> | null
+  }
 }
