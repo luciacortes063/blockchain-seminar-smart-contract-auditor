@@ -3,299 +3,246 @@
 import { useState } from 'react'
 import type { AuditReport, Severity, Vulnerability } from '@/types/report'
 
-/* ── Severity config ──────────────────────────────────────────────────────── */
-
+/* ─── Severity palette ──────────────────────────────────────────────────────── */
 const SEV: Record<Severity, {
-  label: string; color: string; bg: string; border: string; leftBar: string; badge: string
+  color: string; bg: string; border: string; badgeBg: string; badgeText: string; label: string
 }> = {
-  CRITICAL: {
-    label: 'CRITICAL', color: '#EF4444',
-    bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.3)',
-    leftBar: '#EF4444', badge: 'bg-red-500/20 text-red-400 border-red-500/40',
-  },
-  HIGH: {
-    label: 'HIGH', color: '#F97316',
-    bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.3)',
-    leftBar: '#F97316', badge: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
-  },
-  MEDIUM: {
-    label: 'MEDIUM', color: '#EAB308',
-    bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.3)',
-    leftBar: '#EAB308', badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-  },
-  LOW: {
-    label: 'LOW', color: '#3B82F6',
-    bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.3)',
-    leftBar: '#3B82F6', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-  },
-  INFO: {
-    label: 'INFO', color: '#6B7280',
-    bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.25)',
-    leftBar: '#6B7280', badge: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-  },
+  CRITICAL: { color:'#EF4444', bg:'rgba(239,68,68,0.08)',  border:'rgba(239,68,68,0.35)',  badgeBg:'rgba(239,68,68,0.2)',  badgeText:'#F87171', label:'CRITICAL' },
+  HIGH:     { color:'#F97316', bg:'rgba(249,115,22,0.08)', border:'rgba(249,115,22,0.35)', badgeBg:'rgba(249,115,22,0.2)', badgeText:'#FB923C', label:'HIGH'     },
+  MEDIUM:   { color:'#EAB308', bg:'rgba(234,179,8,0.08)',  border:'rgba(234,179,8,0.35)',  badgeBg:'rgba(234,179,8,0.2)',  badgeText:'#FDE047', label:'MEDIUM'   },
+  LOW:      { color:'#3B82F6', bg:'rgba(59,130,246,0.08)', border:'rgba(59,130,246,0.35)', badgeBg:'rgba(59,130,246,0.2)', badgeText:'#60A5FA', label:'LOW'      },
+  INFO:     { color:'#6B7280', bg:'rgba(107,114,128,0.08)',border:'rgba(107,114,128,0.25)',badgeBg:'rgba(107,114,128,0.2)',badgeText:'#9CA3AF', label:'INFO'     },
 }
+const CONF_PCT: Record<string, number> = { HIGH:95, MEDIUM:70, LOW:40 }
+const SIDEBAR_INIT = 7
 
-const CONF_PCT: Record<string, number> = { HIGH: 95, MEDIUM: 70, LOW: 40 }
-
-const SIDEBAR_PAGE = 7
-
-/* ── Main component ───────────────────────────────────────────────────────── */
-
-interface Props { report: AuditReport; onReset: () => void }
-
-export default function ReportView({ report, onReset }: Props) {
-  const { meta, overall_risk, summary, contract_info, statistics, vulnerabilities } = report
-  const [selectedIdx, setSelectedIdx] = useState(0)
+/* ─── Root ──────────────────────────────────────────────────────────────────── */
+export default function ReportView({ report, onReset }: { report: AuditReport; onReset: () => void }) {
+  const { meta, overall_risk, contract_info, statistics, vulnerabilities } = report
+  const [sel, setSel]         = useState(0)
   const [showAll, setShowAll] = useState(false)
 
-  const sev = SEV[overall_risk] ?? SEV.INFO
-  const selected = vulnerabilities[selectedIdx] ?? null
-  const visible = showAll ? vulnerabilities : vulnerabilities.slice(0, SIDEBAR_PAGE)
-  const hidden = vulnerabilities.length - SIDEBAR_PAGE
+  const visible  = showAll ? vulnerabilities : vulnerabilities.slice(0, SIDEBAR_INIT)
+  const hiddenN  = vulnerabilities.length - SIDEBAR_INIT
+  const selected = vulnerabilities[sel] ?? null
 
   return (
-    <div className="relative z-10 min-h-screen flex flex-col animate-fade-in">
+    <div className="min-h-screen flex flex-col gap-4 p-5" style={{ background:'#070B13' }}>
 
-      {/* ══ TOP HEADER ══════════════════════════════════════════════════════ */}
-      <header className="flex-shrink-0 px-6 pt-6 pb-4">
-        {/* Title row */}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          {/* Left: title + contract info */}
+      {/* ══ HEADER CARD ════════════════════════════════════════════════════ */}
+      <div style={{ background:'linear-gradient(135deg,#00D4FF,#9B4DFF,#FF2D7C)', padding:1, borderRadius:16 }}>
+        <div className="flex items-start justify-between gap-4 px-5 py-4 rounded-2xl"
+             style={{ background:'#0D1526' }}>
+          {/* Left */}
           <div>
-            <h1 className="font-display text-3xl font-bold grad-text mb-3"
-                style={{ fontFamily: 'var(--font-oxanium)' }}>
+            <h1 className="font-display font-bold text-3xl tracking-tight mb-3"
+                style={{ fontFamily:'var(--font-oxanium)', background:'linear-gradient(90deg,#00D4FF,#9B4DFF,#FF2D7C)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
               Smart Contract Auditor
             </h1>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 bg-bg-card border border-bg-border rounded-xl px-3 py-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                     stroke="#9B4DFF" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-                <span className="text-slate-200 text-sm font-medium">{meta.contract_name}</span>
-              </div>
-              {contract_info?.solidity_version && (
-                <span className="text-slate-500 text-xs font-mono">
-                  Solidity: {contract_info.solidity_version}
-                </span>
-              )}
-              {contract_info?.total_lines > 0 && (
-                <span className="text-slate-500 text-xs font-mono">
-                  Lines: {contract_info.total_lines}
-                </span>
-              )}
-              <span className="text-xs font-medium" style={{ color: '#4ADE80' }}>
-                ✓ Analysis completed
-              </span>
+            <div className="flex items-center gap-2 mb-1.5">
+              <FileDocIcon />
+              <span className="text-slate-100 font-medium text-sm">{meta.contract_name}</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-slate-500 font-mono flex-wrap">
+              {contract_info?.solidity_version && <span>Solidity: {contract_info.solidity_version}</span>}
+              {contract_info?.total_lines > 0  && <span>Lines: {contract_info.total_lines}</span>}
+              <span style={{ color:'#4ADE80' }}>✓ Analysis completed</span>
             </div>
           </div>
-
-          {/* Right: analysis engine box */}
-          <div className="bg-bg-card border border-bg-border rounded-xl p-3 min-w-[160px]">
-            <p className="text-slate-500 text-xs mb-2 font-mono uppercase tracking-wider">Analysis Engine</p>
-            <div className="space-y-1.5">
-              <EngineRow
-                icon={<AIIcon />}
-                label="GenAI Semantic"
-                active={!!report.raw?.llm}
-              />
-              <EngineRow
-                icon={<SlitherIcon />}
-                label="Slither Static"
-                active={meta.slither_available}
-              />
+          {/* Right: Analysis Engine */}
+          <div className="flex-shrink-0 rounded-xl border px-4 py-3 min-w-[170px]"
+               style={{ borderColor:'#1C2D45', background:'#0A1220' }}>
+            <p className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-3">Analysis Engine</p>
+            <div className="space-y-2">
+              <EngineRow icon={<AiBadgeIcon />} label="GenAI Semantic" active={true} />
+              <EngineRow icon={<SlitherBadgeIcon />} label="Slither Static" active={meta.slither_available} />
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* ══ STATS BAR ═══════════════════════════════════════════════════════ */}
-      <div className="flex-shrink-0 px-6 pb-4">
-        <p className="text-slate-400 text-xs uppercase tracking-widest font-mono mb-3">Vulnerabilities</p>
+      {/* ══ STATS ═══════════════════════════════════════════════════════════ */}
+      <div>
+        <p className="text-slate-200 text-sm font-medium mb-3">Vulnerabilities</p>
         <div className="grid grid-cols-5 gap-3">
-          <StatCard label="CRITICAL" count={statistics.critical} sev="CRITICAL" />
-          <StatCard label="HIGH"     count={statistics.high}     sev="HIGH" />
-          <StatCard label="MEDIUM"   count={statistics.medium}   sev="MEDIUM" />
-          <StatCard label="LOW"      count={statistics.low}      sev="LOW" />
+          <StatCard sev="CRITICAL" count={statistics.critical} icon={<EkgIcon color="#EF4444" />} />
+          <StatCard sev="HIGH"     count={statistics.high}     icon={<BarIcon  color="#F97316" />} />
+          <StatCard sev="MEDIUM"   count={statistics.medium}   icon={<BarIcon  color="#EAB308" />} />
+          <StatCard sev="LOW"      count={statistics.low}      icon={<BarIcon  color="#3B82F6" />} />
           <TotalCard count={statistics.total} />
         </div>
       </div>
 
-      {/* ══ TWO-COLUMN MAIN ═════════════════════════════════════════════════ */}
-      <div className="flex flex-1 gap-0 px-6 pb-6 min-h-0" style={{ height: 'calc(100vh - 260px)' }}>
+      {/* ══ TWO-COLUMN ══════════════════════════════════════════════════════ */}
+      <div className="flex gap-3 flex-1 min-h-0" style={{ height:'calc(100vh - 310px)', minHeight:480 }}>
 
         {/* ── LEFT SIDEBAR ─────────────────────────────────────────────── */}
-        <aside className="flex flex-col w-72 flex-shrink-0 bg-bg-card border border-bg-border rounded-l-2xl overflow-hidden">
+        <div className="flex flex-col rounded-2xl overflow-hidden flex-shrink-0 w-64"
+             style={{ background:'#0D1526', border:'1px solid #1C2D45' }}>
           {/* Sidebar header */}
-          <div className="px-4 py-3 border-b border-bg-border flex-shrink-0">
-            <p className="text-slate-400 text-xs uppercase tracking-widest font-mono">Security Analysis</p>
+          <div className="px-4 py-3 border-b" style={{ borderColor:'#1C2D45' }}>
+            <p className="text-slate-400 text-xs uppercase tracking-widest font-mono font-semibold">Security Analysis</p>
             <p className="text-slate-500 text-xs mt-0.5">Vulnerabilities ({vulnerabilities.length})</p>
           </div>
-
           {/* Scrollable list */}
           <div className="flex-1 overflow-y-auto">
-            {visible.map((v, i) => (
-              <SidebarItem
-                key={v.id}
-                vuln={v}
-                selected={selectedIdx === i}
-                onClick={() => setSelectedIdx(i)}
-              />
-            ))}
-
-            {/* Show more */}
-            {!showAll && hidden > 0 && (
-              <button
-                onClick={() => setShowAll(true)}
-                className="w-full py-3 px-4 text-xs text-brand-cyan hover:text-brand-purple transition-colors font-mono border-t border-bg-border"
-              >
-                Show {hidden} more ↓
+            {visible.map((v, i) => {
+              const s = SEV[v.severity] ?? SEV.INFO
+              const isSel = sel === i
+              return (
+                <button key={v.id} onClick={() => setSel(i)}
+                  className="w-full text-left relative border-b transition-all duration-150"
+                  style={{
+                    borderColor:'#1C2D45',
+                    background: isSel ? '#111D30' : 'transparent',
+                    outline: isSel ? `1px solid ${s.color}40` : 'none',
+                    outlineOffset: -1,
+                  }}>
+                  {/* Severity left bar */}
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: s.color }} />
+                  <div className="px-4 py-3 pl-3.5">
+                    <p className={`text-sm font-medium leading-snug mb-2 ${isSel ? 'text-slate-100' : 'text-slate-300'}`}>
+                      {v.title}
+                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
+                            style={{ background: s.badgeBg, color: s.badgeText }}>
+                        {s.label}
+                      </span>
+                      {v.swc_id && <span className="text-xs text-slate-600 font-mono">{v.swc_id}</span>}
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+            {!showAll && hiddenN > 0 && (
+              <button onClick={() => setShowAll(true)}
+                className="w-full py-3 text-xs font-mono text-brand-cyan hover:text-brand-purple transition-colors border-t"
+                style={{ borderColor:'#1C2D45', color:'#60A5FA' }}>
+                Show {hiddenN} more ↓
               </button>
             )}
           </div>
-        </aside>
+        </div>
 
         {/* ── RIGHT DETAIL PANEL ───────────────────────────────────────── */}
-        <div className="flex-1 bg-bg-surface border border-l-0 border-bg-border rounded-r-2xl overflow-y-auto">
-          {selected
-            ? <VulnDetail vuln={selected}  />
-            : (
-              <div className="flex items-center justify-center h-full text-slate-600 font-mono text-sm">
-                Select a vulnerability
-              </div>
-            )
-          }
+        <div className="flex-1 overflow-y-auto rounded-2xl"
+             style={{ background:'linear-gradient(135deg,#00D4FF22,#9B4DFF22,#FF2D7C22)', padding:1 }}>
+          <div className="h-full rounded-2xl overflow-y-auto" style={{ background:'#0D1526' }}>
+            {selected
+              ? <VulnDetail vuln={selected} />
+              : <div className="flex h-full items-center justify-center text-slate-600 font-mono text-sm">Select a vulnerability</div>
+            }
+          </div>
         </div>
       </div>
 
       {/* ══ FOOTER ══════════════════════════════════════════════════════════ */}
-      <div className="flex-shrink-0 px-6 pb-6 flex justify-between items-center">
-        <button
-          onClick={onReset}
-          className="text-xs font-mono text-slate-500 hover:text-brand-cyan transition-colors border border-bg-border hover:border-brand-cyan/30 px-4 py-2 rounded-xl"
-        >
+      <div className="flex items-center justify-between">
+        <button onClick={onReset}
+          className="text-xs font-mono text-slate-500 hover:text-slate-300 transition-colors border rounded-full px-4 py-1.5"
+          style={{ borderColor:'#1C2D45' }}>
           ← New Audit
         </button>
-        <p className="text-xs text-slate-600 font-mono">
-          {meta.llm_model} · {new Date(meta.audit_timestamp).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
-        </p>
+        <p className="text-xs text-slate-600 font-mono">{meta.llm_model}</p>
       </div>
     </div>
   )
 }
 
-/* ── Sidebar item ─────────────────────────────────────────────────────────── */
-
-function SidebarItem({ vuln, selected, onClick }: {
-  vuln: Vulnerability; selected: boolean; onClick: () => void
-}) {
-  const s = SEV[vuln.severity] ?? SEV.INFO
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-4 py-3 border-b border-bg-border transition-all duration-150 relative
-        ${selected ? 'bg-bg-surface' : 'hover:bg-bg-surface/50'}`}
-    >
-      {/* Left color bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-0.5"
-           style={{ background: s.leftBar }} />
-
-      <p className={`text-sm font-medium leading-snug mb-1.5
-        ${selected ? 'text-slate-100' : 'text-slate-300'}`}>
-        {vuln.title}
-      </p>
-      <div className="flex items-center gap-2">
-        <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded border ${s.badge}`}>
-          {s.label}
-        </span>
-        {vuln.swc_id && (
-          <span className="text-xs text-slate-600 font-mono">{vuln.swc_id}</span>
-        )}
-      </div>
-    </button>
-  )
-}
-
-/* ── Vulnerability detail ─────────────────────────────────────────────────── */
-
+/* ─── Vulnerability detail ──────────────────────────────────────────────────── */
 function VulnDetail({ vuln }: { vuln: Vulnerability }) {
   const s = SEV[vuln.severity] ?? SEV.INFO
   const confPct = CONF_PCT[vuln.confidence] ?? 70
 
   return (
-    <div className="p-6 space-y-5">
-      {/* Severity badge + title */}
+    <div className="p-5 space-y-5">
+
+      {/* Severity pill + title + desc */}
       <div>
-        <span className={`inline-block text-xs font-mono font-bold px-2.5 py-1 rounded border mb-3 ${s.badge}
-          ${vuln.severity === 'CRITICAL' ? 'animate-crit' : ''}`}>
+        <span className="inline-block text-xs font-mono font-bold px-3 py-1 rounded mb-3"
+              style={{ background: s.badgeBg, color: s.badgeText }}>
           {s.label}
         </span>
-        <h2 className="font-display text-2xl font-bold text-slate-100 leading-tight"
-            style={{ fontFamily: 'var(--font-oxanium)' }}>
+        <h2 className="font-display font-bold text-2xl text-slate-100 leading-tight mb-2"
+            style={{ fontFamily:'var(--font-oxanium)' }}>
           {vuln.title}
         </h2>
         {vuln.description && (
-          <p className="text-slate-400 text-sm mt-2 leading-relaxed">{vuln.description}</p>
+          <p className="text-slate-400 text-sm leading-relaxed">{vuln.description}</p>
         )}
       </div>
 
       {/* IMPACT */}
       {vuln.exploitation_scenario && (
-        <Section title="IMPACT" titleColor={s.color}>
+        <div>
+          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2"
+             style={{ color:'#F97316' }}>Impact</p>
           <div className="rounded-xl p-4 flex gap-3 items-start"
-               style={{ background: s.bg, border: `1px solid ${s.border}` }}>
-            <span className="mt-0.5 flex-shrink-0">
-              <WarningIcon color={s.color} />
-            </span>
+               style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.25)' }}>
+            <span className="flex-shrink-0 mt-0.5"><TriangleWarnIcon /></span>
             <p className="text-slate-300 text-sm leading-relaxed">{vuln.exploitation_scenario}</p>
           </div>
-        </Section>
+        </div>
       )}
 
       {/* LOCATION */}
-      {(vuln.affected_code_snippet || vuln.line_numbers?.length > 0) && (
-        <Section title="LOCATION" titleColor="#9B4DFF">
-          <CodeBlock snippet={vuln.affected_code_snippet} lineNumbers={vuln.line_numbers} />
-        </Section>
+      {vuln.affected_code_snippet && (
+        <div>
+          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2"
+             style={{ color:'#2DD4BF' }}>Location</p>
+          <CodeBlock snippet={vuln.affected_code_snippet} lineNumbers={vuln.line_numbers ?? []} />
+        </div>
       )}
 
       {/* RECOMMENDATION */}
       {vuln.recommendation && (
-        <Section title="RECOMMENDATION" titleColor="#4ADE80">
+        <div>
+          <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2"
+             style={{ color:'#4ADE80' }}>Recommendation</p>
           <div className="rounded-xl p-4 flex gap-3 items-start"
-               style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
-            <span className="mt-0.5 flex-shrink-0"><ShieldIcon /></span>
+               style={{ background:'rgba(74,222,128,0.06)', border:'1px solid rgba(74,222,128,0.2)' }}>
+            <span className="flex-shrink-0 mt-0.5"><ShieldCheckIcon /></span>
             <p className="text-slate-300 text-sm leading-relaxed">{vuln.recommendation}</p>
           </div>
-        </Section>
+        </div>
       )}
 
       {/* Bottom metadata row */}
-      <div className="grid grid-cols-3 gap-4 pt-2">
+      <div className="grid grid-cols-3 gap-3 pt-1">
+
         {/* Confidence */}
-        <div className="bg-bg-card border border-bg-border rounded-xl p-4 flex flex-col items-center gap-2">
+        <div className="rounded-xl p-4 flex flex-col items-center gap-2"
+             style={{ background:'#0A1220', border:'1px solid #1C2D45' }}>
           <p className="text-slate-500 text-xs uppercase tracking-widest font-mono">Confidence</p>
-          <ConfidenceCircle pct={confPct} color={s.color} />
-          <p className="text-slate-500 text-xs">{vuln.confidence === 'HIGH' ? 'Very High' : vuln.confidence === 'MEDIUM' ? 'Medium' : 'Low'}</p>
+          <ConfCircle pct={confPct} color={s.color} />
+          <p className="text-slate-500 text-xs">
+            {vuln.confidence === 'HIGH' ? 'Very High' : vuln.confidence === 'MEDIUM' ? 'Medium' : 'Low'}
+          </p>
         </div>
 
-        {/* Detected by */}
-        <div className="bg-bg-card border border-bg-border rounded-xl p-4 flex flex-col items-center gap-2">
-          <p className="text-slate-500 text-xs uppercase tracking-widest font-mono mb-1">Detected By</p>
-          <div className="space-y-1.5 w-full">
-            <SourceBadge label="AI GenAI" active={vuln.source === 'LLM' || vuln.source === 'BOTH'} color="#9B4DFF" />
-            <SourceBadge label="Slither" active={vuln.source === 'SLITHER' || vuln.source === 'BOTH'} color="#00D4FF" />
-            <SourceBadge label="AI + Slither" active={vuln.source === 'BOTH'} color="#FF2D7C" />
+        {/* Detected By */}
+        <div className="rounded-xl p-4 flex flex-col items-center gap-2.5"
+             style={{ background:'#0A1220', border:'1px solid #1C2D45' }}>
+          <p className="text-slate-500 text-xs uppercase tracking-widest font-mono">Detected By</p>
+          <div className="grid grid-cols-2 gap-1.5 w-full">
+            <DetectedBadge label="AI GenAI"    active={vuln.source==='LLM'||vuln.source==='BOTH'} color="#9B4DFF" icon="ai" />
+            <DetectedBadge label="Slither"     active={vuln.source==='SLITHER'||vuln.source==='BOTH'} color="#00D4FF" icon="sl" />
+            <DetectedBadge label="AI"          active={false} color="#9B4DFF" icon="ai" />
+            <DetectedBadge label="GenAI+Slither" active={vuln.source==='BOTH'} color="#FF2D7C" icon="both" />
           </div>
         </div>
 
         {/* Category */}
-        <div className="bg-bg-card border border-bg-border rounded-xl p-4 flex flex-col items-center justify-center gap-1">
+        <div className="rounded-xl p-4 flex flex-col items-center justify-center gap-1"
+             style={{ background:'#0A1220', border:'1px solid #1C2D45' }}>
           <p className="text-slate-500 text-xs uppercase tracking-widest font-mono">Category</p>
-          <p className="text-slate-100 text-sm font-medium text-center mt-1">{vuln.category}</p>
+          <p className="text-slate-100 text-base font-semibold text-center mt-1"
+             style={{ fontFamily:'var(--font-oxanium)' }}>
+            {vuln.category}
+          </p>
           {vuln.swc_id && (
-            <p className="text-brand-purple text-xs font-mono">{vuln.swc_id}</p>
+            <p className="text-xs font-mono font-bold" style={{ color:'#9B4DFF' }}>{vuln.swc_id}</p>
           )}
         </div>
       </div>
@@ -303,43 +250,46 @@ function VulnDetail({ vuln }: { vuln: Vulnerability }) {
   )
 }
 
-/* ── Code block with line numbers ──────────────────────────────────────────── */
-
+/* ─── Code block ────────────────────────────────────────────────────────────── */
 function CodeBlock({ snippet, lineNumbers }: { snippet: string; lineNumbers: number[] }) {
-  if (!snippet) return null
+  const rawLines = snippet.split('\n')
+  // Strip leading/trailing empty lines
+  let start = 0, end = rawLines.length - 1
+  while (start <= end && rawLines[start].trim() === '') start++
+  while (end >= start && rawLines[end].trim() === '')   end--
+  const lines = rawLines.slice(start, end + 1)
 
-  const lines = snippet.split('\n').filter((_, i, arr) =>
-    // trim leading/trailing blank lines
-    !(i === 0 && arr[i].trim() === '') && !(i === arr.length - 1 && arr[i].trim() === '')
-  )
-
-  const startLine = lineNumbers?.[0] ?? 1
-  const highlightSet = new Set(lineNumbers ?? [])
+  // First absolute line number to use for display
+  const firstLineNum = lineNumbers.length > 0 ? lineNumbers[0] : 1
+  const hlSet = new Set(lineNumbers)
 
   return (
-    <div className="rounded-xl overflow-hidden border border-bg-border">
-      <div className="bg-bg-base font-mono text-xs overflow-x-auto">
-        <table className="w-full border-collapse">
+    <div className="rounded-xl overflow-hidden" style={{ border:'1px solid #1C2D45', background:'#060A10' }}>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs font-mono">
           <tbody>
             {lines.map((line, i) => {
-              const lineNum = startLine + i
-              const isHl = highlightSet.has(lineNum)
+              const absLine = firstLineNum + i
+              const hl = hlSet.has(absLine)
               return (
-                <tr key={i} style={isHl ? { background: 'rgba(239,68,68,0.10)' } : {}}>
+                <tr key={i} style={hl ? { background:'rgba(239,68,68,0.12)' } : {}}>
                   {/* Line number */}
-                  <td
-                    className="select-none text-right pr-4 pl-4 py-0.5 border-r border-bg-border text-slate-600 w-12"
-                    style={isHl ? { color: '#EF4444', borderRight: '2px solid #EF4444' } : {}}
-                  >
-                    {lineNum}
+                  <td className="select-none text-right pl-4 pr-3 py-1 w-10"
+                      style={{
+                        color: hl ? '#F87171' : '#3D4F6B',
+                        borderRight: hl ? '2px solid #EF4444' : '1px solid #1C2D45',
+                        verticalAlign:'top',
+                        paddingTop: 5, paddingBottom: 5,
+                      }}>
+                    {absLine}
                   </td>
-                  {/* Arrow for highlighted line */}
-                  <td className="pl-2 pr-1 py-0.5 w-5 text-center">
-                    {isHl && <span style={{ color: '#EF4444' }}>→</span>}
+                  {/* Arrow column */}
+                  <td className="w-5 text-center" style={{ color:'#EF4444', paddingTop:5, verticalAlign:'top' }}>
+                    {hl ? '→' : ' '}
                   </td>
                   {/* Code */}
-                  <td className="py-0.5 pr-4 text-slate-300 whitespace-pre">
-                    <SyntaxLine line={line} highlighted={isHl} />
+                  <td className="pl-2 pr-4 py-1 whitespace-pre" style={{ verticalAlign:'top', paddingTop:5, paddingBottom:5 }}>
+                    <SolidityLine code={line} highlighted={hl} />
                   </td>
                 </tr>
               )
@@ -351,137 +301,109 @@ function CodeBlock({ snippet, lineNumbers }: { snippet: string; lineNumbers: num
   )
 }
 
-/* Very simple Solidity syntax coloring */
-function SyntaxLine({ line, highlighted }: { line: string; highlighted: boolean }) {
-  const color = highlighted ? '#FCA5A5' : '#CBD5E1'
+/* Solidity syntax highlighter */
+function SolidityLine({ code, highlighted }: { code: string; highlighted: boolean }) {
+  const baseColor  = highlighted ? '#FCA5A5' : '#94A3B8'
+  const kwColor    = '#60A5FA'   // blue   — keywords
+  const strColor   = '#86EFAC'   // green  — strings / addresses
+  const numColor   = '#FCD34D'   // amber  — numbers
+  const cmtColor   = '#4B5563'   // gray   — comments
 
-  // Keywords
-  // Strings
-  // Comments
+  const tokenRe = /(\/\/[^\n]*|"[^"]*"|'[^']*'|\b0x[0-9a-fA-F]+\b|\b\d+\b|\b(?:function|require|emit|mapping|address|uint256|uint|bool|string|bytes|public|private|external|internal|view|pure|payable|returns|memory|storage|calldata|if|else|for|while|return|event|modifier|contract|interface|library|constructor|struct|enum|import|pragma|solidity|msg|block|tx|true|false)\b)/g
 
-  // Simple approach: return colored spans
+  const parts: React.ReactElement[] = []
+  let last = 0, m: RegExpExecArray | null
 
-  // We'll just do a simple token split
-  const tokenRe = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\/\/.*|\b(?:function|require|emit|mapping|address|uint256|uint|bool|string|bytes|public|private|external|internal|view|pure|payable|returns|memory|storage|calldata|if|else|for|while|return|event|modifier|contract|interface|library|constructor|struct|enum|import|pragma|solidity|msg|block|tx)\b)/g
-
-  const segments: React.ReactElement[] = []
-  let last = 0
-  let m: RegExpExecArray | null
-
-  while ((m = tokenRe.exec(line)) !== null) {
+  while ((m = tokenRe.exec(code)) !== null) {
     if (m.index > last) {
-      segments.push(<span key={last} style={{ color }}>{line.slice(last, m.index)}</span>)
+      parts.push(<span key={last} style={{ color: baseColor }}>{code.slice(last, m.index)}</span>)
     }
-    const token = m[0]
-    let tokenColor = color
-    if (token.startsWith('//')) tokenColor = '#6B7280'
-    else if (token.startsWith('"') || token.startsWith("'")) tokenColor = '#86EFAC'
-    else tokenColor = '#93C5FD' // keyword blue
-
-    segments.push(<span key={m.index} style={{ color: tokenColor }}>{token}</span>)
-    last = m.index + token.length
+    const tok = m[0]
+    let c = baseColor
+    if (tok.startsWith('//'))                        c = cmtColor
+    else if (tok.startsWith('"') || tok.startsWith("'")) c = strColor
+    else if (/^\d|^0x/.test(tok))                   c = numColor
+    else                                              c = kwColor
+    parts.push(<span key={m.index} style={{ color: c }}>{tok}</span>)
+    last = m.index + tok.length
   }
-
-  if (last < line.length) {
-    segments.push(<span key={last} style={{ color }}>{line.slice(last)}</span>)
+  if (last < code.length) {
+    parts.push(<span key={last} style={{ color: baseColor }}>{code.slice(last)}</span>)
   }
-
-  return <>{segments}</>
+  return <>{parts}</>
 }
 
-/* ── Sub-components ─────────────────────────────────────────────────────────── */
-
-function Section({ title, titleColor, children }: {
-  title: string; titleColor: string; children: React.ReactNode
-}) {
-  return (
-    <div>
-      <p className="text-xs font-mono font-bold uppercase tracking-widest mb-2"
-         style={{ color: titleColor }}>
-        {title}
-      </p>
-      {children}
-    </div>
-  )
-}
-
-function StatCard({ label, count, sev }: { label: string; count: number; sev: Severity }) {
+/* ─── Stat card ──────────────────────────────────────────────────────────────── */
+function StatCard({ sev, count, icon }: { sev: Severity; count: number; icon: React.ReactNode }) {
   const s = SEV[sev]
   return (
-    <div className="bg-bg-card border border-bg-border rounded-xl px-4 py-3 flex items-center justify-between"
-         style={count > 0 ? { borderColor: s.border } : {}}>
+    <div className="rounded-xl px-4 py-3 flex items-center justify-between"
+         style={{ background:'#0D1526', border:`1px solid ${count > 0 ? s.border : '#1C2D45'}` }}>
       <div>
-        <p className="font-display text-2xl font-bold" style={{ fontFamily: 'var(--font-oxanium)', color: s.color }}>
-          {count}
-        </p>
-        <p className="text-xs text-slate-500 uppercase tracking-wider font-mono mt-0.5">{label}</p>
+        <p className="font-display text-3xl font-bold leading-none" style={{ fontFamily:'var(--font-oxanium)', color: s.color }}>{count}</p>
+        <p className="text-xs font-mono uppercase tracking-wider mt-1" style={{ color: s.color, opacity:0.7 }}>{s.label}</p>
       </div>
-      <MiniChart color={s.color} />
+      <div className="opacity-70">{icon}</div>
     </div>
   )
 }
 
 function TotalCard({ count }: { count: number }) {
   return (
-    <div className="bg-bg-card border border-bg-border rounded-xl px-4 py-3 flex items-center justify-between">
+    <div className="rounded-xl px-4 py-3 flex items-center justify-between"
+         style={{ background:'#0D1526', border:'1px solid #1C2D45' }}>
       <div>
-        <p className="font-display text-2xl font-bold text-slate-300" style={{ fontFamily: 'var(--font-oxanium)' }}>
-          {count}
-        </p>
-        <p className="text-xs text-slate-500 uppercase tracking-wider font-mono mt-0.5">Total</p>
+        <p className="font-display text-3xl font-bold leading-none text-slate-300" style={{ fontFamily:'var(--font-oxanium)' }}>{count}</p>
+        <p className="text-xs font-mono uppercase tracking-wider mt-1 text-slate-500">Total</p>
       </div>
-      <span className="text-slate-600 text-xl font-light">+</span>
+      <span className="text-slate-600 text-2xl font-light">+</span>
     </div>
   )
 }
 
-function MiniChart({ color }: { color: string }) {
-  const heights = [4, 8, 6, 10, 7, 9, 5]
+/* ─── Confidence circle ─────────────────────────────────────────────────────── */
+function ConfCircle({ pct, color }: { pct: number; color: string }) {
+  const r = 20, circ = 2 * Math.PI * r, dash = (pct / 100) * circ
   return (
-    <div className="flex items-end gap-0.5 h-6 opacity-60">
-      {heights.map((h, i) => (
-        <div key={i} className="w-1 rounded-sm" style={{ height: h * 2, background: color }} />
-      ))}
-    </div>
-  )
-}
-
-function ConfidenceCircle({ pct, color }: { pct: number; color: string }) {
-  const r = 18, circ = 2 * Math.PI * r
-  const dash = (pct / 100) * circ
-  return (
-    <div className="relative w-14 h-14 flex items-center justify-center">
-      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 44 44">
-        <circle cx="22" cy="22" r={r} fill="none" stroke="#1C2D45" strokeWidth="3" />
-        <circle cx="22" cy="22" r={r} fill="none" stroke={color} strokeWidth="3"
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
+    <div className="relative flex items-center justify-center" style={{ width:56, height:56 }}>
+      <svg className="absolute inset-0 -rotate-90" width="56" height="56" viewBox="0 0 56 56">
+        <circle cx="28" cy="28" r={r} fill="none" stroke="#1C2D45" strokeWidth="4" />
+        <circle cx="28" cy="28" r={r} fill="none" stroke={color} strokeWidth="4"
+                strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
       </svg>
-      <span className="text-slate-200 text-xs font-mono font-bold">{pct}%</span>
+      <span className="text-slate-200 font-mono text-xs font-bold">{pct}%</span>
     </div>
   )
 }
 
-function SourceBadge({ label, active, color }: { label: string; active: boolean; color: string }) {
+/* ─── Detected By badge ──────────────────────────────────────────────────────── */
+function DetectedBadge({ label, active, color, icon }: { label:string; active:boolean; color:string; icon:string }) {
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono transition-all
-      ${active ? 'border' : 'opacity-30 border border-bg-border'}`}
-         style={active ? { background: `${color}15`, borderColor: `${color}40`, color } : {}}>
+    <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono transition-all"
+         style={{
+           background: active ? `${color}18` : 'transparent',
+           border: `1px solid ${active ? color+'50' : '#1C2D45'}`,
+           color: active ? color : '#374151',
+           opacity: active ? 1 : 0.45,
+         }}>
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ background: active ? color : '#6B7280' }} />
-      {label}
+            style={{ background: active ? color : '#374151' }} />
+      <span className="truncate">{label}</span>
     </div>
   )
 }
 
+/* ─── Engine row ──────────────────────────────────────────────────────────────── */
 function EngineRow({ icon, label, active }: { icon: React.ReactNode; label: string; active: boolean }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-6 h-6 rounded-md bg-bg-surface border border-bg-border flex items-center justify-center flex-shrink-0">
+    <div className="flex items-center gap-2.5">
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+           style={{ background:'#0D1526', border:'1px solid #1C2D45' }}>
         {icon}
       </div>
-      <div className="flex-1 min-w-0">
+      <div>
         <p className="text-slate-300 text-xs leading-none">{label}</p>
-        <p className={`text-xs mt-0.5 font-mono ${active ? 'text-green-400' : 'text-slate-600'}`}>
+        <p className="text-xs font-mono font-bold mt-0.5" style={{ color: active ? '#4ADE80' : '#374151' }}>
           {active ? 'Active' : 'Inactive'}
         </p>
       </div>
@@ -489,36 +411,72 @@ function EngineRow({ icon, label, active }: { icon: React.ReactNode; label: stri
   )
 }
 
-function AIIcon() {
+/* ─── Icons ───────────────────────────────────────────────────────────────────── */
+function FileDocIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9B4DFF" strokeWidth="2" strokeLinecap="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B4DFF" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
     </svg>
   )
 }
 
-function SlitherIcon() {
+function AiBadgeIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" strokeLinecap="round">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B4DFF" strokeWidth="2" strokeLinecap="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5"/>
+      <path d="M2 12l10 5 10-5"/>
     </svg>
   )
 }
 
-function WarningIcon({ color }: { color: string }) {
+function SlitherBadgeIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" strokeLinecap="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
   )
 }
 
-function ShieldIcon() {
+function TriangleWarnIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" strokeWidth="2" strokeLinecap="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <polyline points="9 12 11 14 15 10" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  )
+}
+
+function ShieldCheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" strokeWidth="2" strokeLinecap="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <polyline points="9 12 11 14 15 10"/>
+    </svg>
+  )
+}
+
+function EkgIcon({ color }: { color: string }) {
+  return (
+    <svg width="40" height="24" viewBox="0 0 40 24" fill="none">
+      <polyline points="0,12 8,12 11,4 14,20 17,8 20,16 23,12 40,12"
+                stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    </svg>
+  )
+}
+
+function BarIcon({ color }: { color: string }) {
+  const h = [6, 10, 8, 14, 10, 12, 7]
+  return (
+    <svg width="32" height="18" viewBox="0 0 32 18" fill="none">
+      {h.map((ht, i) => (
+        <rect key={i} x={i * 5} y={18 - ht} width="3.5" height={ht} rx="1"
+              fill={color} opacity={0.6 + i * 0.05} />
+      ))}
     </svg>
   )
 }
