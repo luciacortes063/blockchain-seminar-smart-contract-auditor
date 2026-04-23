@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import type { AuditReport } from '@/types/report'
 import FileUpload from './components/FileUpload'
 import ReportView from './components/ReportView'
@@ -22,11 +22,27 @@ const SCAN_MESSAGES = [
 /* ── Main page ──────────────────────────────────────────────────────────── */
 
 export default function Home() {
-  const [file, setFile]       = useState<File | null>(null)
-  const [appState, setAppState] = useState<AppState>('idle')
-  const [report, setReport]   = useState<AuditReport | null>(null)
-  const [error, setError]     = useState('')
-  const [msgIdx, setMsgIdx]   = useState(0)
+  const [file, setFile]               = useState<File | null>(null)
+  const [fileContent, setFileContent] = useState<string>('')
+  const [appState, setAppState]       = useState<AppState>('idle')
+  const [report, setReport]           = useState<AuditReport | null>(null)
+  const [error, setError]             = useState('')
+  const [msgIdx, setMsgIdx]           = useState(0)
+
+  /** Read the .sol file as plain text whenever it changes */
+  const handleFileChange = useCallback(async (f: File | null) => {
+    setFile(f)
+    if (f) {
+      try {
+        const text = await f.text()
+        setFileContent(text)
+      } catch {
+        setFileContent('')
+      }
+    } else {
+      setFileContent('')
+    }
+  }, [])
 
   const handleSubmit = async () => {
     if (!file) return
@@ -61,12 +77,16 @@ export default function Home() {
   }
 
   const handleReset = () => {
-    setFile(null); setReport(null); setError(''); setAppState('idle')
+    setFile(null)
+    setFileContent('')
+    setReport(null)
+    setError('')
+    setAppState('idle')
   }
 
   /* Report view gets full-screen layout */
   if (appState === 'done' && report) {
-    return <ReportView report={report} onReset={handleReset} />
+    return <ReportView report={report} fileContent={fileContent} onReset={handleReset} />
   }
 
   return (
@@ -91,7 +111,7 @@ export default function Home() {
         {/* ── Upload / Scanning / Error ── */}
         {appState === 'idle' && (
           <div className="space-y-4 animate-slide-up">
-            <FileUpload file={file} onChange={setFile} />
+            <FileUpload file={file} onChange={handleFileChange} />
             <button
               onClick={handleSubmit}
               disabled={!file}
@@ -135,16 +155,11 @@ function ScanningView({ message }: { message: string }) {
     <div className="animate-fade-in">
       <div className="grad-border overflow-hidden" style={{ height: 280 }}>
         <div className="relative w-full h-full bg-bg-surface rounded-2xl overflow-hidden scan-grid">
-          {/* Animated scan line */}
           <div className="scan-line" />
-
-          {/* Corner brackets */}
           <span className="absolute top-4 left-4 w-5 h-5 border-l-2 border-t-2 border-brand-cyan/60 rounded-tl" />
           <span className="absolute top-4 right-4 w-5 h-5 border-r-2 border-t-2 border-brand-pink/60 rounded-tr" />
           <span className="absolute bottom-4 left-4 w-5 h-5 border-l-2 border-b-2 border-brand-cyan/60 rounded-bl" />
           <span className="absolute bottom-4 right-4 w-5 h-5 border-r-2 border-b-2 border-brand-pink/60 rounded-br" />
-
-          {/* Center: radar + text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
             <RadarIcon />
             <div className="text-center">
@@ -167,33 +182,25 @@ function ScanningView({ message }: { message: string }) {
 function RadarIcon() {
   return (
     <div className="relative w-16 h-16">
-      {/* Static rings */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 64 64" fill="none">
         <circle cx="32" cy="32" r="30" stroke="rgba(0,212,255,0.12)" strokeWidth="1" />
         <circle cx="32" cy="32" r="20" stroke="rgba(155,77,255,0.15)" strokeWidth="1" />
         <circle cx="32" cy="32" r="10" stroke="rgba(255,45,124,0.18)" strokeWidth="1" />
-        {/* Crosshairs */}
-        <line x1="32" y1="2" x2="32" y2="62" stroke="rgba(0,212,255,0.08)" strokeWidth="0.5" />
-        <line x1="2" y1="32" x2="62" y2="32" stroke="rgba(0,212,255,0.08)" strokeWidth="0.5" />
-        {/* Center dot */}
+        <line x1="32" y1="2"  x2="32" y2="62" stroke="rgba(0,212,255,0.08)" strokeWidth="0.5" />
+        <line x1="2"  y1="32" x2="62" y2="32" stroke="rgba(0,212,255,0.08)" strokeWidth="0.5" />
         <circle cx="32" cy="32" r="2" fill="#9B4DFF" />
       </svg>
-      {/* Rotating sweep */}
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox="0 0 64 64"
         fill="none"
         style={{ animation: 'radarSweep 2.5s linear infinite', transformOrigin: '32px 32px' }}
       >
-        <path
-          d="M32 32 L32 2 A30 30 0 0 1 57 47 Z"
-          fill="url(#radarGrad)"
-          opacity="0.35"
-        />
+        <path d="M32 32 L32 2 A30 30 0 0 1 57 47 Z" fill="url(#radarGrad)" opacity="0.35" />
         <line x1="32" y1="32" x2="32" y2="2" stroke="#00D4FF" strokeWidth="1.5" strokeLinecap="round" />
         <defs>
           <radialGradient id="radarGrad" cx="32" cy="32" r="30" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#9B4DFF" />
+            <stop offset="0%"   stopColor="#9B4DFF" />
             <stop offset="100%" stopColor="#00D4FF" stopOpacity="0" />
           </radialGradient>
         </defs>
