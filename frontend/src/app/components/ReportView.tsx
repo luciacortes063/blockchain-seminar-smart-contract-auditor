@@ -208,10 +208,11 @@ export default function ReportView({
       >
         {/* ── LEFT SIDEBAR ─────────────────────────────────────────────── */}
         <div
-          className="flex flex-col rounded-2xl overflow-hidden flex-shrink-0 w-64"
+          className="flex flex-col rounded-2xl flex-shrink-0 w-64"
           style={{ background: '#050D1C', border: '1px solid #1C2D45' }}
         >
-          <div className="px-4 py-3 border-b" style={{ borderColor: '#1C2D45' }}>
+          {/* Header */}
+          <div className="px-4 py-3 border-b flex-shrink-0" style={{ borderColor: '#1C2D45' }}>
             <p className="text-slate-400 text-xs uppercase tracking-widest font-mono font-semibold">
               Security Analysis
             </p>
@@ -220,58 +221,100 @@ export default function ReportView({
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          {/* Scrollable list — px gives room for the 1px gradient border */}
+          <div className="flex-1 overflow-y-auto px-2 py-2" style={{ gap: 4, display: 'flex', flexDirection: 'column' }}>
             {visible.map((v, i) => {
-              const s     = SEV[v.severity] ?? SEV.INFO
-              const isSel = sel === i
+              const s      = SEV[v.severity] ?? SEV.INFO
+              const isSel  = sel === i
+              const isHov  = hoverIdx === i && !isSel
               return (
-                <button
-                  key={v.id}
-                  onClick={() => setSel(i)}
-                  onMouseEnter={() => setHoverIdx(i)}
-                  onMouseLeave={() => setHoverIdx(null)}
-                  className="w-full text-left relative border-b transition-all duration-150"
-                  style={{
-                    borderColor:   '#1C2D45',
-                    background:    isSel
-                      ? `linear-gradient(90deg, ${s.color}18 0%, #081020 100%)`
-                      : hoverIdx === i
-                        ? `linear-gradient(90deg, ${s.color}0D 0%, transparent 100%)`
-                        : 'transparent',
-                    outline:       isSel ? `1px solid ${s.color}45` : 'none',
-                    outlineOffset: -1,
-                    boxShadow:     hoverIdx === i && !isSel ? `inset 3px 0 0 ${s.color}60` : 'none',
-                  }}
-                >
+                <div key={v.id} style={{ position: 'relative', borderRadius: 12 }}>
+
+                  {/* ── Gradient border: always rendered, opacity animated ── */}
                   <div
-                    className="absolute left-0 top-0 bottom-0 w-0.5"
-                    style={{ background: s.color }}
+                    style={{
+                      position:     'absolute',
+                      inset:        -1,
+                      borderRadius: 13,
+                      background:   'linear-gradient(135deg, #00D4FF 0%, #9B4DFF 50%, #FF2D7C 100%)',
+                      opacity:       isSel ? 0.90 : isHov ? 0.45 : 0,
+                      transition:   'opacity 0.25s ease',
+                      pointerEvents: 'none',
+                    }}
                   />
-                  <div className="px-4 py-3 pl-3.5">
-                    <p className={`text-sm font-medium leading-snug mb-2 ${isSel ? 'text-slate-100' : hoverIdx === i ? 'text-slate-200' : 'text-slate-400'}`}>
-                      {v.title}
-                    </p>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
-                        style={{ background: s.badgeBg, color: s.badgeText }}
+
+                  {/* ── Button content ── */}
+                  <button
+                    onClick={() => setSel(i)}
+                    onMouseEnter={() => setHoverIdx(i)}
+                    onMouseLeave={() => setHoverIdx(null)}
+                    className="w-full text-left"
+                    style={{
+                      position:   'relative',
+                      borderRadius: 12,
+                      overflow:   'hidden',
+                      background:  isSel
+                        ? `linear-gradient(135deg, ${s.color}1A 0%, #081020 100%)`
+                        : isHov
+                          ? 'linear-gradient(135deg, rgba(0,212,255,0.06) 0%, rgba(155,77,255,0.04) 100%)'
+                          : '#050D1C',
+                      transition:  'background 0.25s ease',
+                    }}
+                  >
+                    {/* Severity left accent bar */}
+                    <div
+                      style={{
+                        position:   'absolute',
+                        left:        0, top: 0, bottom: 0,
+                        width:       3,
+                        borderRadius: '3px 0 0 3px',
+                        background:  s.color,
+                        opacity:     isSel ? 1 : isHov ? 0.55 : 0.25,
+                        transition:  'opacity 0.25s ease',
+                      }}
+                    />
+                    <div className="px-4 py-3 pl-4">
+                      <p
+                        style={{
+                          fontSize:    14,
+                          fontWeight:  500,
+                          lineHeight:  1.35,
+                          marginBottom: 8,
+                          color:        isSel ? '#F1F5F9' : isHov ? '#CBD5E1' : '#94A3B8',
+                          transition:  'color 0.2s ease',
+                        }}
                       >
-                        {s.label}
-                      </span>
-                      {v.swc_id && (
-                        <span className="text-xs text-slate-600 font-mono">{v.swc_id}</span>
-                      )}
+                        {v.title}
+                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: s.badgeBg, color: s.badgeText }}
+                        >
+                          {s.label}
+                        </span>
+                        {v.swc_id && (
+                          <span className="text-xs font-mono" style={{ color: '#3D5470' }}>{v.swc_id}</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+                </div>
               )
             })}
 
             {!showAll && hiddenN > 0 && (
               <button
                 onClick={() => setShowAll(true)}
-                className="w-full py-3 text-xs font-mono transition-colors border-t"
-                style={{ borderColor: '#1C2D45', color: '#60A5FA' }}
+                onMouseEnter={() => setHoverIdx(-1)}
+                onMouseLeave={() => setHoverIdx(null)}
+                className="w-full py-2.5 text-xs font-mono rounded-xl transition-all duration-200"
+                style={{
+                  color:      '#60A5FA',
+                  background:  hoverIdx === -1 ? 'rgba(96,165,250,0.08)' : 'transparent',
+                  border:     `1px solid ${hoverIdx === -1 ? 'rgba(96,165,250,0.3)' : '#1C2D45'}`,
+                  transition: 'all 0.2s ease',
+                }}
               >
                 Show {hiddenN} more ∨
               </button>
