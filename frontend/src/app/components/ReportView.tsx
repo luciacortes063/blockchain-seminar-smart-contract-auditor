@@ -275,8 +275,9 @@ export default function ReportView({
         <div
           className="flex-1 min-h-0 rounded-2xl"
           style={{
-            background: 'linear-gradient(135deg, #00D4FF40, #9B4DFF40 50%, #FF2D7C40)',
+            background: 'linear-gradient(135deg, #00D4FF, #9B4DFF 50%, #FF2D7C)',
             padding: 1,
+            boxShadow: '0 0 32px rgba(0,212,255,0.08), 0 0 32px rgba(155,77,255,0.08)',
           }}
         >
           <div
