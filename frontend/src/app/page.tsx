@@ -97,8 +97,7 @@ export default function Home() {
         <header className="text-center mb-10">
           <h1 className="font-display text-5xl sm:text-6xl font-bold tracking-tight mb-4"
               style={{ fontFamily: 'var(--font-oxanium)' }}>
-            <span className="grad-text">Smart Contract</span>{' '}
-            <span className="text-slate-100">Auditor</span>
+            <span className="grad-text">Smart Contract Auditor</span>
           </h1>
           <p className="text-slate-400 text-sm mb-1">
             Upload your Solidity Smart Contract. Get a detailed security report.
