@@ -24,7 +24,7 @@ LLM_MODEL = "llama-3.3-70b-versatile"
 LLM_TEMPERATURE = 0.1
 # Increased from 4096 — richer descriptions, exploitation scenarios and
 # recommendations require significantly more tokens.
-LLM_MAX_TOKENS = 8192
+LLM_MAX_TOKENS = 4096
 
 
 def _load_system_prompt() -> str:
