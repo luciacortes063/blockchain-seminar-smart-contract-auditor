@@ -49,15 +49,15 @@ const SEV: Record<Severity, {
     cardShadow: '0 0 20px rgba(234,179,8,0.15), inset 0 1px 0 rgba(234,179,8,0.15)',
   },
   LOW: {
-    color:      '#3B82F6',
-    bg:         'rgba(59,130,246,0.08)',
-    border:     'rgba(59,130,246,0.35)',
-    badgeBg:    'rgba(59,130,246,0.22)',
-    badgeText:  '#60A5FA',
+    color:      '#2563EB',
+    bg:         'rgba(37,99,235,0.08)',
+    border:     'rgba(37,99,235,0.35)',
+    badgeBg:    'rgba(37,99,235,0.22)',
+    badgeText:  '#3B82F6',
     label:      'LOW',
-    cardGrad:   'linear-gradient(135deg, rgba(59,130,246,0.28) 0%, rgba(59,130,246,0.10) 45%, #0D1526 80%)',
-    cardBorder: 'rgba(59,130,246,0.60)',
-    cardShadow: '0 0 20px rgba(59,130,246,0.15), inset 0 1px 0 rgba(59,130,246,0.15)',
+    cardGrad:   'linear-gradient(135deg, rgba(37,99,235,0.28) 0%, rgba(37,99,235,0.10) 45%, #0D1526 80%)',
+    cardBorder: 'rgba(37,99,235,0.60)',
+    cardShadow: '0 0 20px rgba(37,99,235,0.15), inset 0 1px 0 rgba(37,99,235,0.15)',
   },
   INFO: {
     color:      '#6B7280',
@@ -190,12 +190,12 @@ export default function ReportView({
 
       {/* ══ STATS ═══════════════════════════════════════════════════════════ */}
       <div>
-        <p className="text-slate-200 text-sm font-medium mb-3">Vulnerabilities</p>
+        <p className="text-slate-100 text-xl font-semibold mb-3" style={{ fontFamily: 'var(--font-oxanium)' }}>Vulnerabilities</p>
         <div className="grid grid-cols-5 gap-3">
           <StatCard sev="CRITICAL" count={statistics.critical} icon={<EkgIcon    color="#EF4444" />} />
           <StatCard sev="HIGH"     count={statistics.high}     icon={<HighBarIcon   color="#F97316" />} />
           <StatCard sev="MEDIUM"   count={statistics.medium}   icon={<MediumBarIcon color="#EAB308" />} />
-          <StatCard sev="LOW"      count={statistics.low}      icon={<LowBarIcon    color="#3B82F6" />} />
+          <StatCard sev="LOW"      count={statistics.low}      icon={<LowBarIcon    color="#2563EB" />} />
           <TotalCard count={statistics.total} />
         </div>
       </div>
@@ -428,7 +428,7 @@ function VulnDetail({
               color="#00D4FF"
             />
             <DetectedBadge
-              icons={<><AiSmallIcon /><SlitherSmallIcon color="#FF2D7C" /></>}
+              icons={<><AiSmallIcon /><SlitherSmallIcon color="#00D4FF" /></>}
               label="GenAI + Slither"
               active={vuln.source === 'BOTH'}
               color="#FF2D7C"
@@ -651,12 +651,18 @@ function TotalCard({ count }: { count: number }) {
   return (
     <div
       className="rounded-xl px-4 py-3 flex items-center justify-between"
-      style={{ background: '#0D1526', border: '1px solid #1C2D45' }}
+      style={{
+        background: 'linear-gradient(135deg, rgba(107,114,128,0.22) 0%, rgba(107,114,128,0.08) 45%, #0D1526 80%)',
+        border:     '1px solid rgba(107,114,128,0.45)',
+        boxShadow:  '0 0 20px rgba(107,114,128,0.10), inset 0 1px 0 rgba(107,114,128,0.12)',
+      }}
     >
       <div>
         <p className="font-display text-3xl font-bold leading-none text-slate-300"
            style={{ fontFamily: 'var(--font-oxanium)' }}>{count}</p>
-        <p className="text-xs font-mono uppercase tracking-wider mt-1 text-slate-500">Total</p>
+        <p className="text-xs font-mono uppercase tracking-wider mt-1" style={{ color: '#9CA3AF', opacity: 0.82 }}>
+          Total
+        </p>
       </div>
       <span className="text-slate-500 text-2xl font-light leading-none">+</span>
     </div>
