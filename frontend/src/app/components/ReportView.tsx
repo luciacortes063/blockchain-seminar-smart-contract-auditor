@@ -22,7 +22,7 @@ const SEV: Record<Severity, {
     badgeBg:    'rgba(239,68,68,0.22)',
     badgeText:  '#F87171',
     label:      'CRITICAL',
-    cardGrad:   'linear-gradient(135deg, rgba(239,68,68,0.28) 0%, rgba(239,68,68,0.10) 45%, #0D1526 80%)',
+    cardGrad:   'linear-gradient(135deg, rgba(239,68,68,0.28) 0%, rgba(239,68,68,0.10) 45%, #050D1C 80%)',
     cardBorder: 'rgba(239,68,68,0.60)',
     cardShadow: '0 0 20px rgba(239,68,68,0.15), inset 0 1px 0 rgba(239,68,68,0.15)',
   },
@@ -33,7 +33,7 @@ const SEV: Record<Severity, {
     badgeBg:    'rgba(249,115,22,0.22)',
     badgeText:  '#FB923C',
     label:      'HIGH',
-    cardGrad:   'linear-gradient(135deg, rgba(249,115,22,0.28) 0%, rgba(249,115,22,0.10) 45%, #0D1526 80%)',
+    cardGrad:   'linear-gradient(135deg, rgba(249,115,22,0.28) 0%, rgba(249,115,22,0.10) 45%, #050D1C 80%)',
     cardBorder: 'rgba(249,115,22,0.60)',
     cardShadow: '0 0 20px rgba(249,115,22,0.15), inset 0 1px 0 rgba(249,115,22,0.15)',
   },
@@ -44,7 +44,7 @@ const SEV: Record<Severity, {
     badgeBg:    'rgba(234,179,8,0.22)',
     badgeText:  '#FDE047',
     label:      'MEDIUM',
-    cardGrad:   'linear-gradient(135deg, rgba(234,179,8,0.28) 0%, rgba(234,179,8,0.10) 45%, #0D1526 80%)',
+    cardGrad:   'linear-gradient(135deg, rgba(234,179,8,0.28) 0%, rgba(234,179,8,0.10) 45%, #050D1C 80%)',
     cardBorder: 'rgba(234,179,8,0.60)',
     cardShadow: '0 0 20px rgba(234,179,8,0.15), inset 0 1px 0 rgba(234,179,8,0.15)',
   },
@@ -55,7 +55,7 @@ const SEV: Record<Severity, {
     badgeBg:    'rgba(37,99,235,0.22)',
     badgeText:  '#3B82F6',
     label:      'LOW',
-    cardGrad:   'linear-gradient(135deg, rgba(37,99,235,0.28) 0%, rgba(37,99,235,0.10) 45%, #0D1526 80%)',
+    cardGrad:   'linear-gradient(135deg, rgba(37,99,235,0.28) 0%, rgba(37,99,235,0.10) 45%, #050D1C 80%)',
     cardBorder: 'rgba(37,99,235,0.60)',
     cardShadow: '0 0 20px rgba(37,99,235,0.15), inset 0 1px 0 rgba(37,99,235,0.15)',
   },
@@ -66,7 +66,7 @@ const SEV: Record<Severity, {
     badgeBg:    'rgba(107,114,128,0.20)',
     badgeText:  '#9CA3AF',
     label:      'INFO',
-    cardGrad:   'linear-gradient(135deg, rgba(107,114,128,0.18) 0%, #0D1526 70%)',
+    cardGrad:   'linear-gradient(135deg, rgba(107,114,128,0.18) 0%, #050D1C 70%)',
     cardBorder: 'rgba(107,114,128,0.35)',
     cardShadow: 'none',
   },
@@ -132,13 +132,14 @@ export default function ReportView({
   const { meta, contract_info, statistics, vulnerabilities } = report
   const [sel, setSel]         = useState(0)
   const [showAll, setShowAll] = useState(false)
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
 
   const visible  = showAll ? vulnerabilities : vulnerabilities.slice(0, SIDEBAR_INIT)
   const hiddenN  = vulnerabilities.length - SIDEBAR_INIT
   const selected = vulnerabilities[sel] ?? null
 
   return (
-    <div className="min-h-screen flex flex-col gap-4 p-5" style={{ background: '#070B13' }}>
+    <div className="min-h-screen flex flex-col gap-4 p-5" style={{ background: '#01030A' }}>
 
       {/* ══ HEADER CARD ════════════════════════════════════════════════════ */}
       <div style={{
@@ -148,7 +149,7 @@ export default function ReportView({
       }}>
         <div
           className="flex items-start justify-between gap-4 px-5 py-4 rounded-2xl"
-          style={{ background: '#0D1526' }}
+          style={{ background: '#050D1C' }}
         >
           <div>
             <h1
@@ -175,7 +176,7 @@ export default function ReportView({
 
           <div
             className="flex-shrink-0 rounded-xl border px-4 py-3 min-w-[178px]"
-            style={{ borderColor: '#1C2D45', background: '#080E1C' }}
+            style={{ borderColor: '#1C2D45', background: '#030810' }}
           >
             <p className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-3">
               Analysis Engine
@@ -208,7 +209,7 @@ export default function ReportView({
         {/* ── LEFT SIDEBAR ─────────────────────────────────────────────── */}
         <div
           className="flex flex-col rounded-2xl overflow-hidden flex-shrink-0 w-64"
-          style={{ background: '#0D1526', border: '1px solid #1C2D45' }}
+          style={{ background: '#050D1C', border: '1px solid #1C2D45' }}
         >
           <div className="px-4 py-3 border-b" style={{ borderColor: '#1C2D45' }}>
             <p className="text-slate-400 text-xs uppercase tracking-widest font-mono font-semibold">
@@ -227,12 +228,19 @@ export default function ReportView({
                 <button
                   key={v.id}
                   onClick={() => setSel(i)}
+                  onMouseEnter={() => setHoverIdx(i)}
+                  onMouseLeave={() => setHoverIdx(null)}
                   className="w-full text-left relative border-b transition-all duration-150"
                   style={{
                     borderColor:   '#1C2D45',
-                    background:    isSel ? '#111D30' : 'transparent',
+                    background:    isSel
+                      ? `linear-gradient(90deg, ${s.color}18 0%, #081020 100%)`
+                      : hoverIdx === i
+                        ? `linear-gradient(90deg, ${s.color}0D 0%, transparent 100%)`
+                        : 'transparent',
                     outline:       isSel ? `1px solid ${s.color}45` : 'none',
                     outlineOffset: -1,
+                    boxShadow:     hoverIdx === i && !isSel ? `inset 3px 0 0 ${s.color}60` : 'none',
                   }}
                 >
                   <div
@@ -240,7 +248,7 @@ export default function ReportView({
                     style={{ background: s.color }}
                   />
                   <div className="px-4 py-3 pl-3.5">
-                    <p className={`text-sm font-medium leading-snug mb-2 ${isSel ? 'text-slate-100' : 'text-slate-300'}`}>
+                    <p className={`text-sm font-medium leading-snug mb-2 ${isSel ? 'text-slate-100' : hoverIdx === i ? 'text-slate-200' : 'text-slate-400'}`}>
                       {v.title}
                     </p>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -282,7 +290,7 @@ export default function ReportView({
         >
           <div
             className="h-full rounded-2xl overflow-y-auto"
-            style={{ background: '#0D1526' }}
+            style={{ background: '#050D1C' }}
           >
             {selected ? (
               <VulnDetail vuln={selected} fileContent={fileContent} />
@@ -399,7 +407,7 @@ function VulnDetail({
 
         <div
           className="rounded-xl p-4 flex flex-col items-center gap-2"
-          style={{ background: '#080E1C', border: '1px solid #1C2D45' }}
+          style={{ background: '#030810', border: '1px solid #1C2D45' }}
         >
           <p className="text-slate-500 text-xs uppercase tracking-widest font-mono">Confidence</p>
           <ConfCircle pct={confPct} color={s.color} />
@@ -410,7 +418,7 @@ function VulnDetail({
 
         <div
           className="rounded-xl p-4 flex flex-col gap-2"
-          style={{ background: '#080E1C', border: '1px solid #1C2D45' }}
+          style={{ background: '#030810', border: '1px solid #1C2D45' }}
         >
           <p className="text-slate-500 text-xs uppercase tracking-widest font-mono text-center">
             Detected By
@@ -439,7 +447,7 @@ function VulnDetail({
 
         <div
           className="rounded-xl p-4 flex flex-col items-center justify-center gap-1"
-          style={{ background: '#080E1C', border: '1px solid #1C2D45' }}
+          style={{ background: '#030810', border: '1px solid #1C2D45' }}
         >
           <p className="text-slate-500 text-xs uppercase tracking-widest font-mono">Category</p>
           <p
@@ -525,7 +533,7 @@ function CodeBlock({
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ border: '1px solid #1C2D45', background: '#060A10' }}
+      style={{ border: '1px solid #1C2D45', background: '#020508' }}
     >
       <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 260 }}>
         <table
@@ -545,7 +553,7 @@ function CodeBlock({
                     style={{
                       color:         hl ? '#F87171' : '#374D6B',
                       borderRight:   hl ? '2px solid #EF4444' : '1px solid #1C2D45',
-                      background:    hl ? 'rgba(239,68,68,0.14)' : '#060A10',
+                      background:    hl ? 'rgba(239,68,68,0.14)' : '#020508',
                       verticalAlign: 'top',
                       paddingTop: 5, paddingBottom: 5,
                       paddingLeft: 16, paddingRight: 12,
@@ -653,7 +661,7 @@ function TotalCard({ count }: { count: number }) {
     <div
       className="rounded-xl px-4 py-3 flex items-center justify-between"
       style={{
-        background: 'linear-gradient(135deg, rgba(107,114,128,0.22) 0%, rgba(107,114,128,0.08) 45%, #0D1526 80%)',
+        background: 'linear-gradient(135deg, rgba(107,114,128,0.22) 0%, rgba(107,114,128,0.08) 45%, #050D1C 80%)',
         border:     '1px solid rgba(107,114,128,0.45)',
         boxShadow:  '0 0 20px rgba(107,114,128,0.10), inset 0 1px 0 rgba(107,114,128,0.12)',
       }}
@@ -713,7 +721,7 @@ function EngineRow({ icon, label, active }: { icon: React.ReactNode; label: stri
     <div className="flex items-center gap-2.5">
       <div
         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: '#0D1526', border: '1px solid #1C2D45' }}
+        style={{ background: '#050D1C', border: '1px solid #1C2D45' }}
       >
         {icon}
       </div>
