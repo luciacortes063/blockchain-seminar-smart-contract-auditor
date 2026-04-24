@@ -22,7 +22,9 @@ INSTRUCTIONS_PATH = (
 # Alternatives (also free): "llama3-8b-8192" (faster, less accurate)
 LLM_MODEL = "llama-3.3-70b-versatile"
 LLM_TEMPERATURE = 0.1
-LLM_MAX_TOKENS = 4096
+# Increased from 4096 — richer descriptions, exploitation scenarios and
+# recommendations require significantly more tokens.
+LLM_MAX_TOKENS = 8192
 
 
 def _load_system_prompt() -> str:
